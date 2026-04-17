@@ -19,6 +19,7 @@ import type { AgentInvocation, InvocationScope } from '../domain/invocation.js';
 import type { Logger } from './logger.js';
 import type { AuditWriter } from './audit-writer.js';
 import type { CostTracker } from './cost-tracker.js';
+import { invocationStorage } from './invocation-scope.js';
 import type { Storage } from '../ports/storage.js';
 import type { LLMClient, MultimodalLLMClient, EmbeddingClient } from '../ports/llm-client.js';
 import type { ImageGenerator } from '../ports/image-generator.js';
@@ -77,6 +78,12 @@ export class RunContext {
     const startedAt = new Date().toISOString();
     const startMs = Date.now();
 
+    // Per-invocation cost accumulator, bound to this invocation's async tree.
+    // LLM adapters push costs into it via recordInvocationLlmCost(). This
+    // replaces the previous before/after diff on adapters.llm.totalCostUsd,
+    // which double-counted under concurrency.
+    const costStore = { llmUsd: 0 };
+
     // Write input artifact to audit storage
     const inputStr =
       typeof input === 'string'
@@ -102,8 +109,9 @@ export class RunContext {
     };
 
     try {
-      // Execute the agent
-      const output = await agent.execute(input, this);
+      // Execute the agent under an AsyncLocalStorage scope so concurrent
+      // invocations don't share a cost counter.
+      const output = await invocationStorage.run(costStore, () => agent.execute(input, this));
 
       // Write output artifact
       const outputStr =
@@ -120,6 +128,12 @@ export class RunContext {
         typeof output === 'object' && output !== null && !(output instanceof Buffer)
           ? this.summarize(output as Record<string, unknown>)
           : undefined;
+
+      // Attribute only this invocation's own LLM spend to the cost tracker.
+      if (costStore.llmUsd > 0) {
+        inv.costUsdEst = costStore.llmUsd;
+        this.costs.add(agent.name, costStore.llmUsd, this.adapters.llm.name, scope?.productId);
+      }
 
       return output;
     } catch (err: unknown) {

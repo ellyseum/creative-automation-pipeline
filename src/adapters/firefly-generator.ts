@@ -16,6 +16,8 @@
  */
 
 import type { ImageGenerator, ImageGenRequest, GeneratedImage } from '../ports/image-generator.js';
+import { withRetry } from '../infra/retry.js';
+import { imageGenLimit } from '../infra/rate-limiter.js';
 
 // Estimated cost per Firefly premium generation (varies by operation)
 const COST_PER_IMAGE_USD = 0.08;
@@ -51,14 +53,26 @@ export class FireflyGeneratorAdapter implements ImageGenerator {
       scopes: 'firefly_api,ff_apis',
     });
 
-    // Map our request to Firefly's generateImages shape
-    const resp = await client.generateImages({
-      prompt: req.prompt,
-      numVariations: req.n ?? 1,
-      size: req.width && req.height ? { width: req.width, height: req.height } : { width: 1024, height: 1024 },
-      negativePrompt: req.negativePrompt,
-      contentClass: 'photo', // optimize for photographic output
-    });
+    // Guard: process-wide concurrency cap + retry on 429/503. Firefly gets
+    // the same imageGenLimit pool as Imagen since they swap in/out via factory.
+    const resp: any = await imageGenLimit(() =>
+      withRetry(
+        () =>
+          client.generateImages({
+            prompt: req.prompt,
+            numVariations: req.n ?? 1,
+            size: req.width && req.height ? { width: req.width, height: req.height } : { width: 1024, height: 1024 },
+            negativePrompt: req.negativePrompt,
+            contentClass: 'photo', // optimize for photographic output
+          }),
+        {
+          onRetry: (attempt, delayMs, err) => {
+            const status = (err as { status?: unknown; code?: unknown }).status ?? (err as { code?: unknown }).code;
+            console.warn(`[firefly] ${status} — retrying in ${delayMs}ms (attempt ${attempt})`);
+          },
+        },
+      ),
+    );
 
     // Firefly returns pre-signed URLs that expire in 1 hour.
     // We fetch immediately and convert to Buffer so the pipeline

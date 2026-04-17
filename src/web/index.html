@@ -37,6 +37,16 @@
     .badge-pass { background: #14532d; color: #22c55e; }
     .badge-warn { background: #422006; color: #f59e0b; }
     .badge-fail { background: #450a0a; color: #ef4444; }
+    .review-details { margin-top: 8px; font-size: 12px; }
+    .review-details summary { cursor: pointer; color: #aaa; padding: 4px 0; user-select: none; }
+    .review-details summary:hover { color: #fff; }
+    .review-details[open] summary { color: #fff; margin-bottom: 6px; }
+    .review-block { background: #0f0f0f; border-left: 2px solid #333; padding: 8px 10px; margin-top: 6px; border-radius: 0 4px 4px 0; }
+    .review-block h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; margin: 0 0 4px 0; font-weight: 600; }
+    .review-block ul { margin: 4px 0 0 0; padding-left: 16px; color: #ccc; }
+    .review-block li { margin-bottom: 3px; line-height: 1.4; }
+    .review-block .flag-type { color: #f59e0b; font-weight: 600; }
+    .review-block .flag-sev { color: #888; font-size: 10px; text-transform: uppercase; margin-left: 6px; }
 
     /* Cost summary */
     .summary { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
@@ -157,6 +167,63 @@
       }
     }
 
+    // --- Review rendering helpers ---
+    // Escape user-supplied text before dropping it into innerHTML. The reviewer
+    // outputs are LLM-generated strings — safe in practice, but we treat them
+    // as untrusted to avoid any chance of breaking the card layout.
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    // Collapsible panel showing the raw reviewer output. Only rendered when
+    // the reviewer actually flagged something — clean creatives stay compact.
+    function renderReviewDetails(brandCheck, legalCheck) {
+      const brandIssues = brandCheck?.issues ?? [];
+      const brandSuggestions = brandCheck?.suggestions ?? [];
+      const legalFlags = legalCheck?.flags ?? [];
+      if (brandIssues.length === 0 && brandSuggestions.length === 0 && legalFlags.length === 0) {
+        return '';
+      }
+
+      const brandBlock = (brandIssues.length || brandSuggestions.length) ? `
+        <div class="review-block">
+          <h4>Brand auditor — ${esc(brandCheck?.verdict ?? 'unknown')}${
+            brandCheck?.paletteDominance != null
+              ? ` · palette ${(brandCheck.paletteDominance * 100).toFixed(0)}%`
+              : ''
+          }${brandCheck?.toneMatch ? ` · tone ${esc(brandCheck.toneMatch)}` : ''}</h4>
+          ${brandIssues.length ? `<ul>${brandIssues.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
+          ${brandSuggestions.length ? `
+            <h4 style="margin-top: 8px;">Suggestions</h4>
+            <ul>${brandSuggestions.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
+          ` : ''}
+        </div>
+      ` : '';
+
+      const legalBlock = legalFlags.length ? `
+        <div class="review-block">
+          <h4>Legal reviewer — ${esc(legalCheck?.verdict ?? 'unknown')}</h4>
+          <ul>${legalFlags.map((f) => `
+            <li>
+              <span class="flag-type">${esc(f.type)}</span>${f.severity ? `<span class="flag-sev">${esc(f.severity)}</span>` : ''}
+              ${f.text ? `<br><span style="color: #aaa;">"${esc(f.text)}"</span>` : ''}
+              ${f.rationale ? `<br><span style="color: #bbb; margin-top: 2px; display: inline-block;">${esc(f.rationale)}</span>` : ''}
+            </li>
+          `).join('')}</ul>
+        </div>
+      ` : '';
+
+      return `
+        <details class="review-details">
+          <summary>Show review details</summary>
+          ${brandBlock}
+          ${legalBlock}
+        </details>
+      `;
+    }
+
     // --- Display results ---
     function displayResults(manifest, runId) {
       document.getElementById('results').style.display = 'block';
@@ -183,6 +250,8 @@
           const legalBadge = v.legalCheck?.verdict || 'unknown';
           const badgeClass = (v) => v === 'pass' || v === 'clear' ? 'badge-pass' : v === 'warn' || v === 'review_needed' ? 'badge-warn' : 'badge-fail';
 
+          const reviewHtml = renderReviewDetails(v.brandCheck, v.legalCheck);
+
           grid.innerHTML += `
             <div class="card">
               <img src="${imgUrl}" alt="${c.productId} ${c.aspectRatio}" loading="lazy" />
@@ -194,6 +263,7 @@
                   <span class="badge ${badgeClass(legalBadge)}">legal: ${legalBadge}</span>
                 </div>
                 <div class="card-meta">${c.textRendered}</div>
+                ${reviewHtml}
               </div>
             </div>
           `;

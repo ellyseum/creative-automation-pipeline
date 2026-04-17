@@ -30,6 +30,10 @@ export interface AssetIndex {
   // Semantic search — returns top-k matches by cosine similarity.
   search(query: string, embedding: number[], k?: number): Promise<AssetMatch[]>;
 
+  // Direct lookup by path — used when the brief declares assets explicitly
+  // and we want their metadata without running a similarity search.
+  get(path: string): IndexedAsset | undefined;
+
   // Get all indexed asset paths (for diffing against storage).
   indexedPaths(): string[];
 }

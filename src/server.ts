@@ -15,7 +15,7 @@
  */
 
 import express from 'express';
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { resolveAdapters } from './adapters/factory.js';
@@ -52,7 +52,14 @@ const jobs = new Map<string, Job>();
 // Returns immediately with a job ID; client polls /api/jobs/:id for status.
 app.post('/api/run', (req, res) => {
   const briefPath = req.body.brief || 'briefs/example.yaml';
-  const runId = `run-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
+  // Include milliseconds + a short random suffix so two jobs started in the
+  // same second can't collide into the same output directory. Earlier the
+  // runId was truncated to second precision; two parallel API-E2E jobs would
+  // then share `output/<runId>/creatives/_intermediate/<product>-hero.png`
+  // and race on sharp reads, throwing "pngload_buffer: libspng read error".
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23); // YYYY-MM-DDTHH-MM-SS-mmm
+  const rand = Math.random().toString(36).slice(2, 6);
+  const runId = `run-${stamp}-${rand}`;
   const jobId = `job-${Date.now().toString(36)}`;
 
   const job: Job = {
@@ -200,7 +207,10 @@ process.on('unhandledRejection', (reason) => {
 
 // --- Start ---
 
-app.listen(PORT, () => {
+// If the port is already in use (another copy of this server is running),
+// exit cleanly with a friendly message instead of crashing with an EADDRINUSE
+// stack trace. Any other listen error is still fatal.
+const server = app.listen(PORT, () => {
   console.log(`\n  Creative Pipeline Server`);
   console.log(`  http://localhost:${PORT}\n`);
   console.log(`  API:`);
@@ -210,4 +220,12 @@ app.listen(PORT, () => {
   console.log(`    GET  /api/runs         — list completed runs`);
   console.log(`    GET  /api/runs/:id     — get run manifest`);
   console.log(`    GET  /api/briefs       — list available briefs\n`);
+});
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n  Port ${PORT} is already in use — server likely running elsewhere. Exiting.\n`);
+    process.exit(0);
+  }
+  throw err;
 });

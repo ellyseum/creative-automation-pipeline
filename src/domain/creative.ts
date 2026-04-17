@@ -59,6 +59,10 @@ export interface LegalCheckResult {
     type: 'health_claim' | 'implied_guarantee' | 'comparative' | 'prohibited_word';
     text: string;
     severity: 'low' | 'medium' | 'high';
+    // One-to-two sentence explanation of why this triggers the relevant
+    // regulation — supplied by the LLM for semantic flags, synthesized
+    // locally for deterministic regex hits.
+    rationale?: string;
   }>;
 }
 
@@ -73,6 +77,19 @@ export interface ProductVariants {
     prompt: string;
     costUsdEst: number;
     durationMs: number;
+    // Proof-of-use for image-to-image workflows. Populated when a declared
+    // reference was passed to the generator so reviewers can confirm the
+    // subject-preservation path actually ran (path + size + sha of bytes
+    // that hit the API).
+    referencesUsed?: Array<{ path: string; bytes: number; sha256: string }>;
+    // Verdict from the Subject Preservation agent — only present when the
+    // hybrid strategy with a declared reference was used. Lets reviewers
+    // see whether the model honored the reference or drifted.
+    subjectPreservation?: {
+      verdict: 'pass' | 'warn' | 'fail';
+      similarity: number;
+      rationale: string;
+    };
   };
   retrieval?: {
     query: string;

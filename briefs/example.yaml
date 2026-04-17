@@ -32,19 +32,12 @@ products:
   - id: solar-flask
     name: Solar Flask 1L
     description: Premium copper-lined insulated water bottle with minimalist design
+    # hero_asset declared — pipeline will use this
     hero_asset: assets/products/solar-flask/hero.jpg
-    assets:
-      - assets/products/solar-flask/lifestyle-01.jpg
-      - assets/products/solar-flask/lifestyle-02.jpg
-      - assets/products/solar-flask/detail.jpg
-      - assets/products/solar-flask/action.jpg
 
   - id: dawn-brew
     name: Dawn Brew Tea
     description: Organic morning tea blend with adaptogens for sustained energy
-    # No hero_asset — pipeline will search library via RAG or generate via GenAI
+    # No hero_asset dedclared — pipeline will pull the declared reference below via RAG as a reference for generation
     assets:
-      - assets/products/dawn-brew/tea-cup.jpg
       - assets/products/dawn-brew/packaging.jpg
-      - assets/products/dawn-brew/lifestyle-01.jpg
-      - assets/products/dawn-brew/ceremony.jpg

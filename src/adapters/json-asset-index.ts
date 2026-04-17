@@ -108,6 +108,11 @@ export class JsonAssetIndex implements AssetIndex {
     return matches.sort((a, b) => b.similarity - a.similarity).slice(0, k);
   }
 
+  // Direct lookup — returns undefined if the path hasn't been indexed yet.
+  get(path: string): IndexedAsset | undefined {
+    return this.assets.get(path);
+  }
+
   // Get all indexed asset paths — for diffing against storage to find new/removed assets.
   indexedPaths(): string[] {
     return [...this.assets.keys()];

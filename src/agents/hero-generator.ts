@@ -12,13 +12,17 @@
 
 import type { Agent } from './base.js';
 import type { RunContext } from '../infra/run-context.js';
-import type { GeneratedImage } from '../ports/image-generator.js';
+import type { GeneratedImage, ImageGenReferenceImage } from '../ports/image-generator.js';
 
 // Input: the prompt from the Prompt Engineer
 export interface HeroGeneratorInput {
   prompt: string;
   negativePrompt?: string;
   aspectRatio?: string; // default: "1:1" (square hero, cropped per-ratio later by Composer)
+  // Optional reference images — used by image-to-image adapters (Nano Banana)
+  // to preserve the actual product subject from declared brief assets.
+  // Adapters that don't support references ignore these.
+  referenceImages?: ImageGenReferenceImage[];
 }
 
 // Output: the generated image + metadata for the manifest
@@ -37,6 +41,7 @@ export class HeroGeneratorAgent implements Agent<HeroGeneratorInput, HeroGenerat
       negativePrompt: input.negativePrompt,
       aspectRatio: input.aspectRatio ?? '1:1',
       n: 1,
+      referenceImages: input.referenceImages,
     });
 
     // Cost tracking is handled by the orchestrator (which knows the productId).

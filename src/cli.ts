@@ -14,9 +14,8 @@
  */
 
 import { Command } from 'commander';
-import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { join, basename } from 'node:path';
+import { join } from 'node:path';
 
 import { resolveAdapters } from './adapters/factory.js';
 import { Logger } from './infra/logger.js';
@@ -55,7 +54,7 @@ program
       const ctx = new RunContext({ runId, outputDir, logger, audit, costs, adapters });
 
       // Run the full pipeline
-      const manifest = await generateCreatives(briefPath, ctx);
+      await generateCreatives(briefPath, ctx);
 
       // Print final manifest path
       logger.summary(`Manifest: ${join(outputDir, 'manifest.json')}`);

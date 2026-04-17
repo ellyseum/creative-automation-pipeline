@@ -34,6 +34,7 @@
     "commander": "^14.0.0",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "p-limit": "^6.2.0",
     "sharp": "^0.34.5",
     "yaml": "^2.8.0",
     "zod": "^4.3.0"
@@ -58,6 +59,9 @@
     "vitest": "^3.2.0"
   },
   "lint-staged": {
-    "*.ts": ["prettier --write", "eslint --fix"]
+    "*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   }
 }

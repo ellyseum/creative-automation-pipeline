@@ -22,7 +22,11 @@ products:
   - id: solar-flask
     name: Solar Flask 1L
     description: Premium copper-lined insulated water bottle with minimalist design
+    assets:
+      - assets/products/solar-flask/lifestyle-01.jpg
 
   - id: dawn-brew
     name: Dawn Brew Tea
     description: Organic morning tea blend with adaptogens for sustained energy
+    assets:
+      - assets/products/dawn-brew/packaging.jpg

@@ -59,10 +59,9 @@ Per product:
 Per aspect ratio (1:1, 9:16, 16:9):
   │
   ├─ [Localizer]       — LLM cultural adaptation (not literal translation)
-  ├─ [Composer]        — deterministic: @napi-rs/canvas for text, sharp for resize+composite
-  ├─ [Brand Auditor]   — final creative pass
+  ├─ [Composer]        — deterministic: sharp for resize+composite, SVG text overlay
+  ├─ [Brand Auditor]   — advisory: flags composition issues for human review
   └─ [Legal Reviewer]  — hybrid: regex blocklist + multimodal LLM
-  │                       ↺ Composer retry if readability fails (max 1)
   ▼
 [Report Writer]      — LLM → markdown executive summary
   │
@@ -130,7 +129,7 @@ Integration tests that require API keys are skipped when keys aren't set (CI-fri
 
 ## Non-Goals
 
-- **No web UI** — CLI pipeline, as specified. Web layer is a separate concern.
+- **Web UI is a demo layer** — Added as a simple wrapper around the CLI pipeline for visual demos. Not production-hardened (no auth, no input sanitization, in-memory job queue).
 - **No authentication** — Runs locally with env-var credentials.
 - **No scheduling / cron** — Manual invocation only. Scheduling is noted in scaling section.
 - **No real-time streaming** — Batch pipeline, not streaming. Results written to disk.

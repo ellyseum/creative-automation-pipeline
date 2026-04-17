@@ -67,6 +67,14 @@ const CANNED_ASSET_METADATA = JSON.stringify({
   usageHints: ['hero-ready'],
 });
 
+const CANNED_SUBJECT_PRESERVATION = JSON.stringify({
+  verdict: 'pass',
+  similarity: 0.92,
+  issues: [],
+  suggestions: [],
+  rationale: 'Stub: subject preservation check bypassed in stub mode.',
+});
+
 const CANNED_LEGAL = JSON.stringify({
   flags: [],
   verdict: 'clear',
@@ -132,6 +140,8 @@ export class StubLLMAdapter implements LLMClient, MultimodalLLMClient, Embedding
     // "cataloging assets for brand X" contains "brand" but should match catalog, not audit.
     if (p.includes('catalog') || p.includes('asset library')) {
       text = CANNED_ASSET_METADATA;
+    } else if (p.includes('subject preservation') || p.includes('left panel') || p.includes('right panel')) {
+      text = CANNED_SUBJECT_PRESERVATION;
     } else if (p.includes('legal') || p.includes('regulatory')) {
       text = CANNED_LEGAL;
     } else if (p.includes('brand') || p.includes('compliance') || p.includes('auditor')) {

@@ -1,6 +1,28 @@
 # Creative Automation Pipeline
 
+[![CI](https://github.com/ellyseum/creative-automation-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/ellyseum/creative-automation-pipeline/actions/workflows/ci.yml)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![ESM](https://img.shields.io/badge/module-ESM-f7df1e?logo=javascript&logoColor=black)](https://nodejs.org/api/esm.html)
+[![Tested with Vitest](https://img.shields.io/badge/tested_with-vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](#license)
+
 AI-powered CLI tool that generates social ad creatives from a campaign brief. Takes a YAML brief with brand guidelines, products, and campaign message — produces composited ad creatives across multiple aspect ratios with brand compliance and legal checks built in.
+
+## PoC Scope
+
+This is a time-boxed proof of concept. The primary deliverable is the CLI pipeline:
+
+- Accepts a YAML campaign brief with 2+ products
+- Reuses existing assets when provided (`hero_asset`)
+- Generates missing hero assets via the configured image provider
+- Produces 1:1, 9:16, and 16:9 creatives with campaign message overlay
+- Writes organized outputs by product and aspect ratio
+- Produces a manifest, executive report, and agent audit log
+
+The web UI, Azurite integration, CI, Playwright tests, and provider adapters are included as **demo accelerators and integration signals**, not production-complete services. 
+
+Once the core CLI assignment was complete, the remaining timebox was used for bonus polish and demoability.
 
 ## Quick Start
 
@@ -13,16 +35,35 @@ cp .env.example .env
 # Edit .env: set GEMINI_API_KEY
 
 # 3. Run
-npx tsx src/cli.ts run briefs/example.yaml
+bin/pipeline run briefs/example.yaml  # or example-ja.yaml
 ```
 
 Output lands in `output/run-<timestamp>/` with organized product folders, a manifest, and an executive report.
 
 ### No API key? Run in stub mode:
 ```bash
-IMAGE_PROVIDER=stub npx tsx src/cli.ts run briefs/example.yaml
+IMAGE_PROVIDER=stub bin/pipeline run briefs/example.yaml
 ```
 Produces placeholder images — useful for reviewing pipeline structure without burning API credits.
+
+## Implementation Status
+
+| Area | Status | Notes |
+|------|--------|-------|
+| CLI pipeline | **Complete** | Main assignment path. Runs locally with real or stub providers. |
+| YAML brief parsing | **Complete** | Validated with zod. |
+| Asset reuse | **Complete** | Explicit `hero_asset` override is respected; RAG library search supports reuse/hybrid/generate strategy. |
+| Missing asset generation | **Complete** | Imagen adapter implemented; stub generation path covered by automated tests. |
+| Aspect-ratio output | **Complete** | 1:1, 9:16, and 16:9 PNGs with platform-aware safe zones. |
+| Message overlay | **Complete** | Fixed templates with SVG text rendering. |
+| Brand checks | **Basic PoC** | Palette dominance (deterministic) plus multimodal LLM review. Not a full brand-governance engine. |
+| Legal checks | **Basic PoC** | Static prohibited-word scan plus multimodal LLM review. Not a substitute for legal approval. |
+| Audit log | **Complete** | Per-invocation inputs/outputs/status/duration/cost. LLM cost estimated from token counts per agent call. |
+| Cost tracking | **Complete** | Image generation + LLM inference costs tracked per agent, per product, per provider. |
+| Web UI | **Demo layer** | Simple local UI for running and viewing outputs. Not production-hardened. |
+| Azure Blob | **Integration demo** | Adapter implemented and Azurite-tested. Final deliverables written to local filesystem for review simplicity. |
+| Firefly | **Integration-ready** | Real `@adobe/firefly-apis` SDK code exists. Requires enterprise IMS credentials — not exercised in CI. |
+| Localization | **Working** | ja-JP sample brief included; real LLM path supports localization. Stub mode returns English for all regions. |
 
 ## What It Does
 
@@ -30,15 +71,21 @@ Produces placeholder images — useful for reviewing pipeline structure without 
 Campaign Brief (YAML)
   |
   v
-[Asset Analyzer]      -- multimodal LLM describes each library asset
-[Creative Director]   -- LLM with tool calling searches library, plans strategy
-[Prompt Engineer]     -- crafts diffusion-optimized prompts per product
-[Hero Generator]      -- Imagen 4 generates hero images
-[Brand Auditor]       -- hybrid: color histogram + multimodal LLM compliance check
-[Localizer]           -- cultural message adaptation per region
-[Composer]            -- sharp: resize + text overlay + logo + brand bar
-[Legal Reviewer]      -- hybrid: regex blocklist + multimodal legal scan
-[Report Writer]       -- LLM generates executive markdown summary
+[Asset Analyzer]         -- multimodal LLM describes each library asset
+[Creative Director]      -- LLM with tool calling searches library, plans strategy
+                            (coerces declared brief assets into hybrid strategy)
+[Prompt Engineer]        -- crafts diffusion-optimized prompts; flips guidance to
+                            "preserve subject" when a declared reference is present
+[Hero Generator]         -- Nano Banana Pro (gemini-3-pro-image-preview) — supports
+                            reference-image input for image-to-image subject preservation
+[Brand Auditor]          -- hybrid: color histogram + multimodal LLM compliance check
+[Subject Preservation]   -- vision LLM compares generated hero vs. declared reference,
+                            scores similarity, feeds issues+suggestions into retry loop
+[Localizer]              -- cultural message adaptation per region
+[Composer]               -- sharp: resize + text overlay + logo + brand bar
+[Legal Reviewer]         -- hybrid: regex blocklist + multimodal legal scan
+                            (flags include rationale citing the specific rule)
+[Report Writer]          -- LLM generates executive markdown summary
   |
   v
 6 composited creatives + manifest.json + report.md + audit.jsonl
@@ -52,14 +99,22 @@ Clean Architecture (hexagonal). See [DESIGN.md](DESIGN.md) for full details.
 src/
   domain/      -- pure types + zod schemas (no external deps)
   ports/       -- interfaces (LLMClient, ImageGenerator, Storage, AssetIndex)
-  agents/      -- 9 focused AI workers, each with a single job
+                  ImageGenerator supports optional referenceImages for image-to-image
+  agents/      -- 10 focused AI workers, each with a single job
+                  (incl. subject-preservation for image-to-image verification)
   use-cases/   -- pipeline orchestrator with ReAct retry loops
-  adapters/    -- concrete implementations (Gemini, Imagen, Firefly, Azure, stubs)
-  infra/       -- logger, audit writer, cost tracker, run context
+                  (brand auditor + subject preservation run in parallel;
+                   feedback from both merges into a single retry prompt)
+  adapters/    -- concrete implementations:
+                  - gemini-llm (text/vision/embedding) with sticky model fallback
+                  - gemini-image (Nano Banana Pro + Flash) with sticky model fallback
+                  - imagen, firefly, azure blob, local fs, stubs
+  infra/       -- logger, audit writer, cost tracker, run context, retry
   cli.ts       -- commander entry point
+  server.ts    -- Express web server (demo layer, exits cleanly on EADDRINUSE)
 ```
 
-Dependencies flow inward only. Swap providers via env vars — no code changes.
+Dependencies flow inward only. Image generation and storage providers are selected via env vars; LLM/model selection is Gemini-based in this PoC.
 
 ## Campaign Brief Format
 
@@ -126,7 +181,7 @@ bin/pipeline audit output/run-<id>
 bin/pipeline cost output/run-<id>
 ```
 
-## Web Server
+## Web Server (Demo Layer)
 
 ```bash
 # Start the web server (auto-sources .env)
@@ -155,7 +210,6 @@ API endpoints:
 | `LLM_MODEL` | `gemini-3.1-pro-preview` | Override LLM model |
 | `STORAGE_BACKEND` | `local` | `local` / `azure` |
 | `AZURE_STORAGE_CONNECTION_STRING` | -- | For Azure Blob (Azurite or real) |
-| `AUDIT` | -- | Set to `1` for verbose artifact logging |
 | `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` |
 
 ## Provider Adapters
@@ -164,8 +218,8 @@ API endpoints:
 |----------|--------|----------|
 | **Google Gemini 3.1 Pro** | Default | LLM + multimodal vision + embeddings |
 | **Google Imagen 4 Fast** | Default | Image generation ($0.02/image) |
-| **Adobe Firefly Services** | Stubbed | Production target (requires enterprise IMS) |
-| **Azure Blob Storage** | Implemented | Works with Azurite (local) or real Azure |
+| **Adobe Firefly Services** | Integration-ready | Production target for Adobe customers (requires enterprise IMS) |
+| **Azure Blob Storage** | Integration demo | Adapter tested via Azurite; pipeline outputs to local FS for simplicity |
 | **Local Filesystem** | Default | Zero-config development storage |
 
 ## Docker (Azurite for Azure Blob)
@@ -183,7 +237,7 @@ AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devsto
 npm test                    # unit + CLI E2E (29 tests)
 npm run test:api            # API E2E — Express server lifecycle (6 tests)
 npm run test:playwright     # Frontend E2E — Playwright browser tests (4 tests)
-npm run test:all            # everything sequentially (39+ tests)
+npm run test:all            # everything sequentially
 npm run test:unit           # unit only (no API calls)
 npm run test:watch          # watch mode
 ```
@@ -211,21 +265,33 @@ Husky enforces code quality on every commit:
 1. **Clean Architecture** -- domain depends on nothing, adapters are outer ring
 2. **Gemini for all AI roles** -- one API key covers LLM + vision + embeddings + image gen
 3. **Adobe Firefly adapter shipped but gated** -- real SDK code, requires enterprise creds
-4. **RAG via analyzed descriptions** -- Asset Analyzer describes images, embeds text, not pixels
-5. **Creative Director uses tool calling** -- agentic search over asset library during planning
-6. **ReAct retry loops** -- Brand Auditor feedback feeds back to Prompt Engineer (max 2 retries)
+4. **RAG via analyzed descriptions** -- Asset Analyzer describes images, embeds text (not pixels) for inspectable retrieval
+5. **Creative Director uses tool calling** -- agentic search over asset library during planning (two-phase: tools then structured output, split into tool-calling then structured output for reliability in this PoC)
+6. **ReAct retry loops** -- Brand Auditor feedback feeds back to Prompt Engineer for hero generation (max 2 retries). Composition brand checks are advisory-only (the composer is deterministic and cannot act on art direction feedback)
 7. **JSONL audit trail** -- every agent invocation logged with input/output artifact refs
 8. **Platform safe zones** -- 9:16 avoids IG/TikTok UI regions in text placement
-9. **No LangChain/AutoGen** -- hand-written orchestration for full control
+9. **No LangChain/AutoGen** -- hand-written orchestration for full control and line-by-line defensibility
 
-## Assumptions & Limitations
+## Known Limitations
 
 - Campaign brief is trusted input (no adversarial prompt injection defense, no HTML sanitization in frontend rendering)
 - Free-tier Gemini has rate limits (2-5 RPM) -- pipeline runs sequentially, not parallel
-- Brand compliance checks are advisory, not blocking (except on hero generation)
+- Brand/legal compliance checks are basic PoC implementations, not production compliance engines
 - Localization is LLM-driven (no human-in-the-loop verification)
-- Text rendering uses SVG via sharp (system fonts only -- custom brand fonts need @napi-rs/canvas)
-- In-memory job queue (not persistent across server restarts -- production would use Redis/SQS)
+- Text rendering uses fixed SVG templates (no wrapping, dynamic sizing, or custom brand font rendering)
+- Creative Director's `compositionNotes` are produced but not yet wired into Composer behavior
+- LLM cost estimates are based on approximate per-token pricing, not actual billing data from the provider
+- Stub mode returns canned responses for the sample brief products (not general-purpose for arbitrary briefs)
+- In-memory job queue (not persistent across server restarts)
+- Azure Blob adapter is tested but final outputs still route through local filesystem writes
+
+## Development Notes
+
+Built as a time-boxed PoC. The core CLI assignment was completed first (~2h10m), satisfying the minimum requirements and covering the listed nice-to-haves at PoC depth. The remaining timebox was used for cleanup, polish, bug fixes and demo accelerators: web UI, API wrapper, integration tests, Playwright coverage, CI, and README polish. 
+
+The git commit window from initial scaffold to final polish is just under 3 hours.
+
+Architecture and design planning was done before the first commit to keep the implementation focused.
 
 ## Scaling Notes
 
@@ -237,3 +303,25 @@ Husky enforces code quality on every commit:
 | Sequential execution | Queue-based parallel per product |
 | Manual CLI invocation | Cron + webhooks + event triggers |
 | Single machine | Kubernetes / Azure Container Apps |
+
+## Production Hardening Roadmap
+
+### Direct PoC Hardening
+
+- **Plan validation** -- Cross-check the Creative Director plan against the brief so every product is covered exactly once and strategy-specific fields are present.
+- **Text layout** -- Add wrapping, dynamic font sizing, CJK-aware layout, and custom brand font rendering via @napi-rs/canvas.
+- **Composition notes** -- Wire Creative Director placement guidance into the Composer instead of using only fixed templates.
+- **Provider contract tests** -- Add opt-in tests for Gemini, Imagen, Firefly, and Azure paths when credentials are present.
+- **Coverage reports** -- Add Istanbul/c8 coverage gates and target untested branches such as retry loops and provider failures.
+
+### Production Scale
+
+- **Multi-region briefs** -- Support `regions: [en-US, ja-JP, es-MX]`, fan out per region, share hero generation, and localize only the message.
+- **Persistent job queue** -- Replace the in-memory job map with Redis or Azure Queue for restart safety and horizontal scaling.
+- **Content-addressed asset cache** -- Cache generated heroes by `sha256(prompt + brand_guide_version)` to reduce repeated GenAI spend.
+- **Per-run cost budgets** -- Add `budget: { max_usd: 1.00 }` to briefs and abort before runaway generation loops exceed budget.
+- **A/B creative variants** -- Generate multiple hero candidates, score them, and record selection rationale in the manifest.
+- **OpenTelemetry tracing** -- Wrap `RunContext.invoke()` in spans and export traces to Jaeger or Datadog.
+- **Webhook triggers** -- Trigger runs from DAM or blob-storage uploads.
+- **Production frontend** -- Replace the simple HTML UI with React + Tailwind + shadcn/ui, YAML validation, asset upload, and live progress via SSE.
+- **Blue/green deployments** -- Add Dockerfile, deploy to Azure Container Apps or ECS with health check endpoint and zero-downtime rollout.

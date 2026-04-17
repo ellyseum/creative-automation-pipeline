@@ -50,6 +50,11 @@ const SemanticLegalCheckSchema = z.object({
       type: z.enum(['health_claim', 'implied_guarantee', 'comparative', 'prohibited_word']),
       text: z.string().describe('The specific text or visual element flagged'),
       severity: z.enum(['low', 'medium', 'high']),
+      rationale: z
+        .string()
+        .describe(
+          'One-to-two sentences explaining why this triggers the regulation. Cite the specific rule or principle (e.g. "FTC substantiation — implies a measurable wellness outcome without evidence"). Required for every flag.',
+        ),
     }),
   ),
   verdict: z.enum(['clear', 'review_needed', 'blocked']),
@@ -69,6 +74,7 @@ export class LegalReviewerAgent implements Agent<LegalReviewerInput, LegalCheckR
           type: 'prohibited_word',
           text: word,
           severity: 'high',
+          rationale: `"${word}" is on the prohibited-words list for ${input.region} advertising — typically an unsubstantiated superlative, health claim, or guarantee.`,
         });
       }
     }
@@ -79,20 +85,23 @@ export class LegalReviewerAgent implements Agent<LegalReviewerInput, LegalCheckR
     }
 
     // --- Layer 2: Semantic LLM check on the rendered creative ---
+    // Use null for conditional fillers so `filter` drops ONLY the missing
+    // ones — the intentional `''` blank separators survive as section breaks.
     const prompt = [
       `You are a legal content reviewer for ${input.region} social media advertising.`,
       `Relevant regulations:`,
-      input.region.startsWith('en-US') ? `- FTC advertising guidelines (truth in advertising, substantiation)` : '',
-      input.region.startsWith('en-GB') ? `- ASA Code of Non-broadcast Advertising` : '',
+      input.region.startsWith('en-US') ? `- FTC advertising guidelines (truth in advertising, substantiation)` : null,
+      input.region.startsWith('en-GB') ? `- ASA Code of Non-broadcast Advertising` : null,
       `- General: no unsubstantiated health claims, no implied guarantees, no misleading imagery`,
       '',
       `Campaign text: "${input.message}"`,
-      input.productCategory ? `Product category: ${input.productCategory}` : '',
+      input.productCategory ? `Product category: ${input.productCategory}` : null,
       '',
       `Analyze both the TEXT and IMAGERY in this ad creative.`,
       `Flag any regulatory concerns. Be conservative — flag "review_needed" for ambiguous cases.`,
+      `For EVERY flag, include a "rationale" (1–2 sentences) that names the specific rule or principle (e.g. FTC substantiation, implied endorsement, comparative claim without evidence) and explains why this particular text or visual triggers it. Without a rationale a flag is not actionable.`,
     ]
-      .filter(Boolean)
+      .filter((line): line is string => line !== null)
       .join('\n');
 
     const result = await ctx.adapters.multimodal.analyzeImage({

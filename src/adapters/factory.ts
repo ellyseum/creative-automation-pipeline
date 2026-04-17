@@ -6,9 +6,15 @@
  * From this point on, the pipeline only sees port interfaces — never SDKs.
  *
  * Provider selection:
- *   IMAGE_PROVIDER=imagen (default) | firefly | openai | stub
- *   LLM_PROVIDER=gemini (default) | openai
+ *   IMAGE_PROVIDER=gemini-image (default) | imagen | firefly | stub
  *   STORAGE_BACKEND=local (default) | azure
+ *
+ * Why gemini-image is the default: the pipeline's hybrid strategy passes
+ * declared brief reference images to the generator for subject preservation
+ * (e.g., "use the real packaging from packaging.jpg, don't redesign it").
+ * Imagen 4 Fast is pure text-to-image and silently drops references, which
+ * causes subject-preservation audits to fail forever. Nano Banana (Gemini
+ * Image) actually accepts references and preserves subjects.
  *
  * Fallback: if GEMINI_API_KEY is missing, all AI adapters fall back to stubs.
  * This allows the pipeline structure to be tested without any API keys.
@@ -19,6 +25,7 @@ import type { Adapters } from '../infra/run-context.js';
 
 import { GeminiAdapter } from './gemini-llm.js';
 import { ImagenGeneratorAdapter } from './imagen-generator.js';
+import { GeminiImageGeneratorAdapter } from './gemini-image-generator.js';
 import { LocalFsStorage } from './local-fs-storage.js';
 import { AzureBlobStorage } from './azure-blob-storage.js';
 import { JsonAssetIndex } from './json-asset-index.js';
@@ -30,7 +37,10 @@ export function resolveAdapters(): Adapters {
   // --- Full stub mode ---
   // IMAGE_PROVIDER=stub with no GEMINI_API_KEY = everything stubbed.
   // Useful for: testing pipeline structure, CI, demo without API keys.
-  const imageProviderName = optional('IMAGE_PROVIDER', 'imagen');
+  // Default changed from 'imagen' to 'gemini-image' so subject-preservation
+  // workflows (hybrid strategy with declared brief references) actually
+  // work out-of-the-box. Users who prefer Imagen can set IMAGE_PROVIDER=imagen.
+  const imageProviderName = optional('IMAGE_PROVIDER', 'gemini-image');
   const geminiKey = optional('GEMINI_API_KEY');
 
   if (!geminiKey || imageProviderName === 'stub') {
@@ -71,6 +81,12 @@ export function resolveAdapters(): Adapters {
     case 'stub':
       // Stub mode — no API calls, placeholder images
       imageGen = new StubGeneratorAdapter();
+      break;
+    case 'gemini-image':
+    case 'nano-banana':
+      // Nano Banana (Gemini 3 Pro/Flash Image). Supports reference images for
+      // image-to-image workflows (e.g. "use packaging.jpg as the subject").
+      imageGen = new GeminiImageGeneratorAdapter({ apiKey: geminiKey });
       break;
     case 'imagen':
     default:

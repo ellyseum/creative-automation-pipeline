@@ -34,7 +34,6 @@ export interface ComposerInput {
   logoImage: Buffer; // brand logo PNG
   brandPalette: string[]; // hex colors for the overlay bar
   compositionNotes?: string; // from Creative Director (placement hints)
-  retryHint?: string; // from Brand Auditor (readability feedback)
   fontPath?: string; // path to brand display font (optional)
 }
 
@@ -138,12 +137,6 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
     // Resolve placement template — start with ratio default, apply overrides
     const template = { ...(TEMPLATES[input.aspectRatio] ?? TEMPLATES['1:1']) };
     const overridesApplied: string[] = [];
-
-    // Apply retry hint — Brand Auditor may request increased contrast
-    if (input.retryHint?.includes('contrast')) {
-      template.barOpacity = Math.min(1.0, template.barOpacity + 0.2);
-      overridesApplied.push('retry:increased-contrast');
-    }
 
     // 1. Resize hero to target dimensions — smart crop preserving the focal point
     const resized = await sharp(input.heroImage)

@@ -29,6 +29,10 @@ describe('API E2E', () => {
       env: { ...process.env, IMAGE_PROVIDER: 'stub', PORT: String(PORT), LOG_LEVEL: 'warn' },
       stdio: 'pipe',
     });
+    // Surface server stderr so CI logs show the real failure when a job
+    // crashes inside the server. Without this the child's errors vanish.
+    server.stderr?.on('data', (b) => process.stderr.write(`[server] ${b}`));
+    server.stdout?.on('data', (b) => process.stdout.write(`[server] ${b}`));
 
     // Wait for server to be ready
     for (let i = 0; i < 20; i++) {
@@ -84,6 +88,11 @@ describe('API E2E', () => {
       await new Promise((r) => setTimeout(r, 1000));
     }
 
+    if (job.status !== 'completed') {
+      // Dump the actual error so CI logs tell us what went wrong instead of
+      // a bare "expected 'failed' to be 'completed'" mismatch.
+      console.error('Job did not complete. Full job object:', JSON.stringify(job, null, 2));
+    }
     expect(job.status).toBe('completed');
     expect(job.manifest).toBeDefined();
     expect(job.manifest.stats.totalCreatives).toBe(6);

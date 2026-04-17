@@ -10,6 +10,11 @@
  * pipeline never worries about URL lifecycle.
  */
 
+export interface ImageGenReferenceImage {
+  bytes: Buffer;
+  mimeType: string; // "image/png" | "image/jpeg"
+}
+
 export interface ImageGenRequest {
   prompt: string;
   negativePrompt?: string; // what to avoid in generation
@@ -18,6 +23,12 @@ export interface ImageGenRequest {
   aspectRatio?: string; // "1:1", "9:16", "16:9" — provider may prefer this over explicit w/h
   n?: number; // number of variations (default: 1)
   seed?: number; // for reproducibility (if provider supports it)
+
+  // Reference images for image-to-image / subject-preservation workflows.
+  // Only honored by adapters that support multimodal image inputs (e.g.
+  // gemini-3-pro-image / Nano Banana Pro). Adapters without this
+  // capability must silently fall back to pure text-to-image generation.
+  referenceImages?: ImageGenReferenceImage[];
 }
 
 export interface GeneratedImage {

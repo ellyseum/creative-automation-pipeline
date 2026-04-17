@@ -77,9 +77,59 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
     // We collect all search results for Phase 2.
     const allSearchResults = await this.discoverAssets(brief, ctx);
 
+    // Seed declared product assets as pre-ranked candidates. The brief can
+    // name specific references per product — we look up their indexed
+    // metadata and inject them so Phase 2 sees them as first-class matches
+    // rather than hoping a similarity search surfaces them.
+    this.injectDeclaredAssets(brief, allSearchResults, ctx);
+
     // ===== PHASE 2: Plan generation with structured output =====
     // Clean single-turn call with full context + JSON schema enforcement.
-    return this.generatePlan(brief, allSearchResults, ctx);
+    const plan = await this.generatePlan(brief, allSearchResults, ctx);
+
+    // ===== Enforcement pass =====
+    // Declared brief assets are authoritative — the user literally named them.
+    // Weaker LLMs (flash-lite, etc.) sometimes ignore the "must use hybrid"
+    // rule from the prompt and pick "generate" anyway. Coerce any product
+    // with declared assets into hybrid with the first declared reference so
+    // the semantic is deterministic regardless of LLM compliance.
+    this.coerceDeclaredReferences(brief, plan, ctx);
+
+    return plan;
+  }
+
+  /**
+   * Rewrite any ProductPlan whose product has declared `assets:` in the brief
+   * but whose strategy is "generate" (or whose reference isn't one of the
+   * declared paths). Keeps the model's generationDirection / compositionNotes
+   * intact — only the strategy and referenceAssetPath are coerced.
+   */
+  private coerceDeclaredReferences(brief: Brief, plan: CreativePlan, ctx: RunContext): void {
+    for (const productPlan of plan.products) {
+      const product = brief.products.find((p) => p.id === productPlan.productId);
+      if (!product?.assets?.length) continue;
+
+      const declared = product.assets;
+      const currentRefPath = productPlan.strategy === 'reuse' ? productPlan.assetPath : productPlan.referenceAssetPath;
+      const refIsDeclared = currentRefPath && declared.includes(currentRefPath);
+
+      if (productPlan.strategy !== 'hybrid' || !refIsDeclared) {
+        const chosen = refIsDeclared ? currentRefPath! : declared[0];
+        ctx.logger.warn(
+          this.name,
+          `Coercing ${product.id} to hybrid with declared reference ${chosen} (LLM chose ${productPlan.strategy}${currentRefPath ? ` with ${currentRefPath}` : ''})`,
+        );
+        productPlan.strategy = 'hybrid';
+        productPlan.referenceAssetPath = chosen;
+        productPlan.assetPath = undefined;
+        productPlan.assetSimilarity = undefined;
+        productPlan.referenceRationale =
+          productPlan.referenceRationale ?? `Brief declared ${chosen} as the reference for ${product.id}.`;
+        productPlan.generationDirection =
+          productPlan.generationDirection ??
+          `Preserve the product subject shown in ${chosen}; adapt the scene, lighting, and palette to match the campaign and brand.`;
+      }
+    }
   }
 
   /**
@@ -168,9 +218,11 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
       'create a per-product creative strategy.',
       '',
       'Strategy rules:',
-      '- "reuse": if a library match has similarity >= 0.85, use it directly. Include assetPath.',
-      '- "hybrid": if best match is 0.6-0.85, use as style reference. Include referenceAssetPath + generationDirection.',
-      '- "generate": if no match above 0.6, generate from scratch. Include generationDirection.',
+      '- Declared references (assets the brief explicitly names under a product\'s `assets:` list) are style/subject references for generation, NOT drop-in heroes. If a product has declared references, you MUST choose "hybrid" with the most relevant one as referenceAssetPath and a generationDirection that extracts the key subject (e.g. the product itself) while adapting composition, lighting, and palette to the brand. Never pick "reuse" or "generate" when declared references exist. (Literal drop-in reuse is handled separately via the `hero_asset` field, which the pipeline applies before you run.)',
+      '- Otherwise, apply similarity thresholds:',
+      '  - "reuse": if a library match has similarity >= 0.85, use it directly. Include assetPath.',
+      '  - "hybrid": if best match is 0.6-0.85, use as style reference. Include referenceAssetPath + generationDirection.',
+      '  - "generate": if no match above 0.6, generate from scratch. Include generationDirection.',
       '',
       'For ALL strategies: include compositionNotes (where subject is, where text should go).',
       'Include rationale explaining your decision for each product.',
@@ -193,6 +245,34 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
     return CreativePlanSchema.parse(JSON.parse(resp.text!));
   }
 
+  // For each product that declares `assets:` in the brief, pull their
+  // indexed metadata and register them under a synthetic search key so
+  // they show up in Phase 2's library context. Similarity is reported as
+  // 1.0 because the brief literally named them — they're authoritative.
+  private injectDeclaredAssets(brief: Brief, results: Map<string, AssetMatch[]>, ctx: RunContext): void {
+    for (const product of brief.products) {
+      if (!product.assets?.length) continue;
+      const matches: AssetMatch[] = [];
+      for (const path of product.assets) {
+        const indexed = ctx.adapters.assetIndex.get(path);
+        if (!indexed) {
+          ctx.logger.warn(
+            this.name,
+            `Declared asset "${path}" for product ${product.id} is not indexed — skipping injection`,
+          );
+          continue;
+        }
+        matches.push({ path, similarity: 1.0, metadata: indexed.metadata });
+      }
+      if (matches.length) {
+        results.set(
+          `Declared generation references for product "${product.id}" (use as style/subject reference, NOT drop-in hero)`,
+          matches,
+        );
+      }
+    }
+  }
+
   // Format the brief for the LLM prompt
   private formatBriefSummary(brief: Brief): string {
     return [
@@ -204,10 +284,16 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
       `Brand palette: ${brief.brand.palette.join(', ')}`,
       '',
       'Products:',
-      ...brief.products.map(
-        (p) =>
-          `  - ${p.id}: ${p.name} — ${p.description}${p.hero_asset ? ` (has existing hero: ${p.hero_asset})` : ' (no hero — needs retrieval or generation)'}`,
-      ),
+      ...brief.products.flatMap((p) => {
+        const heroNote = p.hero_asset
+          ? ` (has existing hero: ${p.hero_asset})`
+          : ' (no hero — needs retrieval or generation)';
+        const lines = [`  - ${p.id}: ${p.name} — ${p.description}${heroNote}`];
+        if (p.assets?.length) {
+          lines.push(`    declared references: ${p.assets.join(', ')}`);
+        }
+        return lines;
+      }),
     ].join('\n');
   }
 
