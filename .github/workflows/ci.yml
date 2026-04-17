@@ -33,11 +33,8 @@ jobs:
       - name: Format check
         run: npx prettier --check 'src/**/*.ts'
 
-      - name: Unit tests
-        run: npm run test:unit
-
-      - name: CLI E2E test (stub mode)
-        run: npx vitest run e2e/pipeline.test.ts
+      - name: Unit + CLI E2E tests
+        run: npm test
         env:
           IMAGE_PROVIDER: stub
 
