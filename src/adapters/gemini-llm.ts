@@ -11,17 +11,21 @@
  */
 
 import { GoogleGenAI, Type } from '@google/genai';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { toJSONSchema, type ZodType } from 'zod';
 
-import type { ZodType } from 'zod';
-
-// Note: ZodType from zod v4 has a different internal shape than what zod-to-json-schema
-// expects. We cast to 'any' at the boundary — runtime behavior is correct,
-// only the type signature drifts. Known zod v4 migration issue.
+// Zod v4 has built-in toJSONSchema — the third-party zod-to-json-schema package
+// is incompatible with zod v4 (returns empty schemas). Use the native one.
 import type {
   LLMClient, MultimodalLLMClient, EmbeddingClient,
   LLMMessage, LLMResponse, ToolDeclaration, ToolCall,
 } from '../ports/llm-client.js';
+
+// Strip markdown code fences from LLM responses.
+// Gemini sometimes wraps JSON in ```json ... ``` even with structured output enabled.
+// This is a known behavior — clean it before parsing.
+function stripCodeFences(text: string): string {
+  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+}
 
 // Convert our ToolDeclaration to Gemini's format.
 // Gemini uses its own Type enum — we map from JSON Schema types.
@@ -83,8 +87,30 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
 
   constructor(opts: { apiKey: string; model?: string; embeddingModel?: string }) {
     this.ai = new GoogleGenAI({ apiKey: opts.apiKey });
-    this.model = opts.model ?? 'gemini-2.5-flash';
+    // gemini-2.5-pro: stable GA, free tier, best reasoning quality.
+    // Structured output and tool calling work individually but NOT combined
+    // in the same request (known 2.5 bug). Agents that need both (Creative
+    // Director) must separate them into different rounds.
+    this.model = opts.model ?? 'gemini-2.5-pro';
     this.embeddingModel = opts.embeddingModel ?? 'gemini-embedding-001';
+  }
+
+  // Retry wrapper for transient API errors (429, 503).
+  // Gemini experiences demand spikes — a simple exponential backoff handles this.
+  private async withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (err: any) {
+        const status = err?.status ?? err?.code;
+        const isRetryable = status === 429 || status === 503;
+        if (!isRetryable || attempt === maxRetries) throw err;
+        const delayMs = Math.pow(2, attempt + 1) * 1000;  // 2s, 4s, 8s
+        console.warn(`[gemini] ${status} — retrying in ${delayMs / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+    throw new Error('Unreachable');
   }
 
   // --- LLMClient ---
@@ -104,7 +130,7 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
     // Structured output via JSON schema (requires responseMimeType)
     if (opts.schema) {
       config.responseMimeType = 'application/json';
-      config.responseJsonSchema = zodToJsonSchema(opts.schema as any);
+      config.responseJsonSchema = toJSONSchema(opts.schema);
     }
 
     // Tool declarations for function-calling agents
@@ -117,11 +143,11 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
       }
     }
 
-    const resp = await this.ai.models.generateContent({
+    const resp = await this.withRetry(() => this.ai.models.generateContent({
       model: this.model,
       contents: toGeminiContents(opts.messages),
       config,
-    });
+    }));
 
     // Extract tool calls if present
     const toolCalls: ToolCall[] | undefined = resp.functionCalls?.map(fc => ({
@@ -137,7 +163,7 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
     };
 
     return {
-      text: toolCalls?.length ? undefined : (resp.text ?? undefined),
+      text: toolCalls?.length ? undefined : (resp.text ? stripCodeFences(resp.text) : undefined),
       toolCalls: toolCalls?.length ? toolCalls : undefined,
       tokens,
       model: this.model,
@@ -161,17 +187,17 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
     const config: Record<string, unknown> = {};
     if (opts.schema) {
       config.responseMimeType = 'application/json';
-      config.responseJsonSchema = zodToJsonSchema(opts.schema as any);
+      config.responseJsonSchema = toJSONSchema(opts.schema);
     }
 
-    const resp = await this.ai.models.generateContent({
+    const resp = await this.withRetry(() => this.ai.models.generateContent({
       model: this.model,
       contents,
       config,
-    });
+    }));
 
     return {
-      text: resp.text ?? '',
+      text: resp.text ? stripCodeFences(resp.text) : '',
       tokens: {
         prompt: resp.usageMetadata?.promptTokenCount ?? 0,
         completion: resp.usageMetadata?.candidatesTokenCount ?? 0,
@@ -183,11 +209,11 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
   // --- EmbeddingClient ---
 
   async embed(input: string, opts?: { dimensions?: number }): Promise<number[]> {
-    const resp = await this.ai.models.embedContent({
+    const resp = await this.withRetry(() => this.ai.models.embedContent({
       model: this.embeddingModel,
       contents: input,
       config: { outputDimensionality: opts?.dimensions ?? 768 },
-    });
+    }));
 
     // embedContent returns { embeddings: [{ values: number[] }] }
     const values = resp.embeddings?.[0]?.values;
