@@ -19,7 +19,8 @@
     "test:unit": "vitest run --dir src",
     "test:e2e": "vitest run --dir e2e",
     "test:api": "vitest run e2e/api.test.ts",
-    "test:all": "vitest run --dir src && vitest run e2e/pipeline.test.ts && vitest run e2e/api.test.ts",
+    "test:all": "vitest run --dir src && vitest run e2e/pipeline.test.ts && vitest run e2e/api.test.ts && npx playwright test",
+    "test:playwright": "npx playwright test",
     "test:watch": "vitest",
     "lint": "tsc --noEmit"
   },
@@ -41,6 +42,7 @@
     "openai": "^6.34.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "tsx": "^4.21.0",
