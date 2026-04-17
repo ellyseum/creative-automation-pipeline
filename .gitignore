@@ -3,4 +3,5 @@ dist/
 .env
 output/
 .embeddings/
+tmp/
 *.tgz
