@@ -112,6 +112,44 @@ app.get('/api/briefs', async (_req, res) => {
   res.json({ briefs: files.filter(f => f.endsWith('.yaml') || f.endsWith('.yml')) });
 });
 
+// GET /api/runs/:id/creatives — list creative files for a run
+app.get('/api/runs/:id/creatives', async (req, res) => {
+  try {
+    const creativesDir = join('output', req.params.id, 'creatives');
+    const products = await readdir(creativesDir);
+    const result: Record<string, string[]> = {};
+    for (const product of products) {
+      if (product.startsWith('_')) continue; // skip _intermediate
+      const files = await readdir(join(creativesDir, product));
+      result[product] = files.filter(f => f.endsWith('.png'));
+    }
+    res.json({ runId: req.params.id, creatives: result });
+  } catch {
+    res.status(404).json({ error: 'Creatives not found' });
+  }
+});
+
+// GET /api/runs/:id/audit — get audit log entries
+app.get('/api/runs/:id/audit', async (req, res) => {
+  try {
+    const data = await readFile(join('output', req.params.id, 'audit.jsonl'), 'utf-8');
+    const entries = data.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    res.json({ runId: req.params.id, invocations: entries });
+  } catch {
+    res.status(404).json({ error: 'Audit log not found' });
+  }
+});
+
+// GET /api/runs/:id/report — get the markdown report
+app.get('/api/runs/:id/report', async (req, res) => {
+  try {
+    const data = await readFile(join('output', req.params.id, 'report.md'), 'utf-8');
+    res.type('text/markdown').send(data);
+  } catch {
+    res.status(404).json({ error: 'Report not found' });
+  }
+});
+
 // Static: serve output files (creatives, manifest, report)
 app.use('/output', express.static('output'));
 

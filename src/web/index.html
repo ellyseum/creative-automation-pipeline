@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Pipeline</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e5e5; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 28px; margin-bottom: 4px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+
+    /* Run controls */
+    .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+    select, button { font-size: 14px; padding: 10px 16px; border-radius: 6px; border: 1px solid #333; background: #1a1a1a; color: #e5e5e5; cursor: pointer; }
+    select:hover, button:hover { border-color: #555; }
+    .btn-run { background: #FF5733; border-color: #FF5733; color: white; font-weight: 600; }
+    .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Status */
+    .status { padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 14px; display: none; }
+    .status.queued { display: block; background: #1e3a5f; border: 1px solid #2563eb; }
+    .status.running { display: block; background: #1e3a5f; border: 1px solid #2563eb; }
+    .status.completed { display: block; background: #14532d; border: 1px solid #22c55e; }
+    .status.failed { display: block; background: #450a0a; border: 1px solid #ef4444; }
+
+    /* Creative grid */
+    .grid-title { font-size: 18px; margin: 24px 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; overflow: hidden; }
+    .card img { width: 100%; height: auto; display: block; }
+    .card-body { padding: 12px; }
+    .card-title { font-weight: 600; font-size: 14px; }
+    .card-meta { font-size: 12px; color: #888; margin-top: 4px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-pass { background: #14532d; color: #22c55e; }
+    .badge-warn { background: #422006; color: #f59e0b; }
+    .badge-fail { background: #450a0a; color: #ef4444; }
+
+    /* Cost summary */
+    .summary { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .summary h3 { margin-bottom: 8px; font-size: 16px; }
+    .summary-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .summary-row span:last-child { color: #22c55e; }
+
+    /* Past runs */
+    .runs-list { list-style: none; }
+    .runs-list li { padding: 8px 12px; border-bottom: 1px solid #222; font-size: 13px; cursor: pointer; }
+    .runs-list li:hover { background: #1a1a1a; }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #555; border-top-color: #FF5733; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Creative Pipeline</h1>
+    <p class="subtitle">AI-powered creative automation for social ad campaigns</p>
+
+    <!-- Run controls -->
+    <div class="controls">
+      <select id="brief-select"><option value="">Loading briefs...</option></select>
+      <button class="btn-run" id="run-btn" onclick="startRun()">Run Pipeline</button>
+    </div>
+
+    <!-- Job status -->
+    <div class="status" id="status"></div>
+
+    <!-- Results -->
+    <div id="results" style="display: none;">
+      <!-- Cost summary -->
+      <div class="summary" id="cost-summary"></div>
+
+      <!-- Creative grid -->
+      <h2 class="grid-title">Generated Creatives</h2>
+      <div class="grid" id="creative-grid"></div>
+    </div>
+
+    <!-- Past runs -->
+    <h2 class="grid-title">Past Runs</h2>
+    <ul class="runs-list" id="runs-list"></ul>
+  </div>
+
+  <script>
+    const API = '';  // same origin
+
+    // --- Load briefs on startup ---
+    async function loadBriefs() {
+      const { briefs } = await (await fetch(`${API}/api/briefs`)).json();
+      const sel = document.getElementById('brief-select');
+      sel.innerHTML = briefs.map(b => `<option value="briefs/${b}">${b}</option>`).join('');
+    }
+
+    // --- Load past runs ---
+    async function loadRuns() {
+      const { runs } = await (await fetch(`${API}/api/runs`)).json();
+      const list = document.getElementById('runs-list');
+      list.innerHTML = runs.map(r =>
+        `<li onclick="loadRun('${r}')">${r}</li>`
+      ).join('') || '<li style="color:#666">No past runs</li>';
+    }
+
+    // --- Start a pipeline run ---
+    let currentJobId = null;
+    async function startRun() {
+      const brief = document.getElementById('brief-select').value;
+      if (!brief) return;
+
+      const btn = document.getElementById('run-btn');
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+      setStatus('queued', '<span class="spinner"></span> Queuing pipeline...');
+
+      const resp = await fetch(`${API}/api/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brief }),
+      });
+      const { jobId, runId } = await resp.json();
+      currentJobId = jobId;
+      pollJob(jobId, runId);
+    }
+
+    // --- Poll job status ---
+    async function pollJob(jobId, runId) {
+      const resp = await fetch(`${API}/api/jobs/${jobId}`);
+      const job = await resp.json();
+
+      if (job.status === 'queued' || job.status === 'running') {
+        const elapsed = ((Date.now() - new Date(job.createdAt).getTime()) / 1000).toFixed(0);
+        setStatus('running', `<span class="spinner"></span> Pipeline running... (${elapsed}s)`);
+        setTimeout(() => pollJob(jobId, runId), 3000);
+        return;
+      }
+
+      const btn = document.getElementById('run-btn');
+      btn.disabled = false;
+      btn.textContent = 'Run Pipeline';
+
+      if (job.status === 'completed') {
+        setStatus('completed', `Pipeline complete in ${((new Date(job.completedAt) - new Date(job.createdAt)) / 1000).toFixed(0)}s`);
+        loadRun(runId);
+        loadRuns();
+      } else {
+        setStatus('failed', `Pipeline failed: ${job.error || 'Unknown error'}`);
+      }
+    }
+
+    // --- Load and display a run's results ---
+    async function loadRun(runId) {
+      try {
+        const manifest = await (await fetch(`${API}/api/runs/${runId}`)).json();
+        displayResults(manifest, runId);
+      } catch (err) {
+        console.error('Failed to load run:', err);
+      }
+    }
+
+    // --- Display results ---
+    function displayResults(manifest, runId) {
+      document.getElementById('results').style.display = 'block';
+
+      // Cost summary
+      const costs = manifest.costSummary || {};
+      document.getElementById('cost-summary').innerHTML = `
+        <h3>Run: ${manifest.runId} (${((manifest.durationMs || 0) / 1000).toFixed(0)}s)</h3>
+        <div class="summary-row"><span>Total cost</span><span>$${(costs.totalUsdEst || 0).toFixed(4)}</span></div>
+        <div class="summary-row"><span>Products</span><span>${manifest.stats?.totalProducts || 0}</span></div>
+        <div class="summary-row"><span>Creatives</span><span>${manifest.stats?.totalCreatives || 0}</span></div>
+        <div class="summary-row"><span>Generated heroes</span><span>${manifest.stats?.totalGenerations || 0}</span></div>
+        <div class="summary-row"><span>Retries</span><span>${manifest.stats?.totalRetries || 0}</span></div>
+      `;
+
+      // Creative grid
+      const grid = document.getElementById('creative-grid');
+      grid.innerHTML = '';
+      for (const pv of manifest.products || []) {
+        for (const v of pv.variants || []) {
+          const c = v.creative;
+          const imgUrl = `/output/${runId}/${c.outputPath}`;
+          const brandBadge = v.brandCheck?.verdict || 'unknown';
+          const legalBadge = v.legalCheck?.verdict || 'unknown';
+          const badgeClass = (v) => v === 'pass' || v === 'clear' ? 'badge-pass' : v === 'warn' || v === 'review_needed' ? 'badge-warn' : 'badge-fail';
+
+          grid.innerHTML += `
+            <div class="card">
+              <img src="${imgUrl}" alt="${c.productId} ${c.aspectRatio}" loading="lazy" />
+              <div class="card-body">
+                <div class="card-title">${c.productId} — ${c.aspectRatio}</div>
+                <div class="card-meta">
+                  Hero: ${c.heroSource} &middot;
+                  <span class="badge ${badgeClass(brandBadge)}">brand: ${brandBadge}</span>
+                  <span class="badge ${badgeClass(legalBadge)}">legal: ${legalBadge}</span>
+                </div>
+                <div class="card-meta">${c.textRendered}</div>
+              </div>
+            </div>
+          `;
+        }
+      }
+    }
+
+    // --- Status bar ---
+    function setStatus(type, html) {
+      const el = document.getElementById('status');
+      el.className = `status ${type}`;
+      el.innerHTML = html;
+    }
+
+    // --- Init ---
+    loadBriefs();
+    loadRuns();
+  </script>
+</body>
+</html>

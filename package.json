@@ -12,6 +12,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
+    "dev": "tsx src/server.ts",
+    "serve": "tsx src/server.ts",
     "pipeline": "tsx src/cli.ts",
     "test": "vitest run",
     "test:unit": "vitest run --dir src",
