@@ -1,0 +1,40 @@
+{
+  "name": "creative-automation-pipeline",
+  "version": "1.0.0",
+  "description": "AI-powered creative automation pipeline for scalable social ad campaigns",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "bin": { "pipeline": "./dist/cli.js" },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "pipeline": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run --dir src",
+    "test:e2e": "vitest run --dir e2e",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.31.0",
+    "@google/genai": "^1.50.0",
+    "@napi-rs/canvas": "^0.1.63",
+    "commander": "^14.0.0",
+    "dotenv": "^17.4.0",
+    "sharp": "^0.34.5",
+    "yaml": "^2.8.0",
+    "zod": "^4.3.0",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "optionalDependencies": {
+    "@adobe/firefly-apis": "^2.0.0",
+    "@adobe/firefly-services-common-apis": "^2.0.0",
+    "openai": "^6.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0"
+  }
+}

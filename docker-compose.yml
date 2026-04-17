@@ -1,0 +1,23 @@
+# Local development services for the creative automation pipeline.
+# Run: docker-compose up -d
+# Stop: docker-compose down
+
+services:
+  # Azurite — Microsoft's official Azure Storage emulator.
+  # Provides Blob, Queue, and Table services locally.
+  # The pipeline's AzureBlobStorage adapter works identically against
+  # Azurite and real Azure — same SDK, same connection string pattern.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    # --blobHost 0.0.0.0: bind to all interfaces (required in Docker)
+    # --loose: relax API version checks for newer SDK versions
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose
+    ports:
+      - "10000:10000"   # Blob service
+      - "10001:10001"   # Queue service
+      - "10002:10002"   # Table service
+    volumes:
+      - azurite-data:/data
+
+volumes:
+  azurite-data:
