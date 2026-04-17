@@ -87,11 +87,7 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
 
   constructor(opts: { apiKey: string; model?: string; embeddingModel?: string }) {
     this.ai = new GoogleGenAI({ apiKey: opts.apiKey });
-    // gemini-2.5-pro: stable GA, free tier, best reasoning quality.
-    // Structured output and tool calling work individually but NOT combined
-    // in the same request (known 2.5 bug). Agents that need both (Creative
-    // Director) must separate them into different rounds.
-    this.model = opts.model ?? 'gemini-2.5-pro';
+    this.model = opts.model ?? (process.env.LLM_MODEL || 'gemini-3.1-pro-preview');
     this.embeddingModel = opts.embeddingModel ?? 'gemini-embedding-001';
   }
 
