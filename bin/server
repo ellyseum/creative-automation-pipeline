@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Start the creative pipeline web server.
+# Usage: bin/server
+#        PORT=8080 bin/server
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# Load .env if present
+if [ -f .env ]; then
+  set -a; source .env 2>/dev/null; set +a
+fi
+
+exec npx tsx src/server.ts

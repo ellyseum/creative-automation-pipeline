@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Run the creative automation pipeline CLI.
+# Usage: bin/pipeline run briefs/example.yaml
+#        bin/pipeline audit output/run-*/
+#        bin/pipeline cost output/run-*/
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# Load .env if present
+if [ -f .env ]; then
+  set -a; source .env 2>/dev/null; set +a
+fi
+
+exec npx tsx src/cli.ts "$@"

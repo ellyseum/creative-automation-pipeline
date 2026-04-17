@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Seed Azurite with test assets from the local assets/ directory.
+# Requires: docker-compose up -d (Azurite running on localhost:10000)
+# Usage: bin/seed-azurite
+set -euo pipefail
+cd "$(dirname "$0")/.."
+exec node scripts/seed-azurite.mjs
