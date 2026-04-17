@@ -22,7 +22,9 @@
     "test:playwright": "npx playwright test",
     "test:all": "vitest run && vitest run e2e/api.test.ts && vitest run e2e/azurite.test.ts && npx playwright test",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit && eslint src/",
+    "format": "prettier --write 'src/**/*.ts' 'e2e/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts' 'e2e/**/*.ts'"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.31.0",
@@ -41,11 +43,15 @@
     "openai": "^6.34.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.59.1",
     "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
+    "eslint": "^10.2.0",
+    "prettier": "^3.8.3",
     "tsx": "^4.21.0",
     "typescript": "^5.8.0",
+    "typescript-eslint": "^8.58.2",
     "vitest": "^3.2.0"
   }
 }

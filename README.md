@@ -94,19 +94,20 @@ products:
 
 ```
 output/run-2026-04-16T23-16-47/
-  manifest.json           -- structured audit: products, costs, checks
-  report.md               -- LLM-generated executive summary
-  audit.jsonl             -- per-agent invocation log (append-only)
-  _intermediate/          -- generated hero images (pre-composition)
-  _audit/                 -- per-invocation input/output artifacts
-  solar-flask/
-    1x1.png               -- Instagram/Facebook Feed
-    9x16.png              -- Stories/Reels/TikTok
-    16x9.png              -- YouTube/Display
-  dawn-brew/
-    1x1.png
-    9x16.png
-    16x9.png
+  manifest.json              -- structured audit: products, costs, checks
+  report.md                  -- LLM-generated executive summary
+  audit.jsonl                -- per-agent invocation log (append-only)
+  _audit/                    -- per-invocation input/output artifacts
+  creatives/                 -- deliverable assets (separate from audit)
+    _intermediate/           -- generated hero images (pre-composition)
+    solar-flask/
+      1x1.png                -- Instagram/Facebook Feed (1080x1080)
+      9x16.png               -- Stories/Reels/TikTok (1080x1920)
+      16x9.png               -- YouTube/Display (1920x1080)
+    dawn-brew/
+      1x1.png
+      9x16.png
+      16x9.png
 ```
 
 ## CLI Reference
@@ -210,11 +211,12 @@ Test tiers:
 
 ## Assumptions & Limitations
 
-- Campaign brief is trusted input (no adversarial prompt injection defense)
+- Campaign brief is trusted input (no adversarial prompt injection defense, no HTML sanitization in frontend rendering)
 - Free-tier Gemini has rate limits (2-5 RPM) -- pipeline runs sequentially, not parallel
 - Brand compliance checks are advisory, not blocking (except on hero generation)
 - Localization is LLM-driven (no human-in-the-loop verification)
 - Text rendering uses SVG via sharp (system fonts only -- custom brand fonts need @napi-rs/canvas)
+- In-memory job queue (not persistent across server restarts -- production would use Redis/SQS)
 
 ## Scaling Notes
 
