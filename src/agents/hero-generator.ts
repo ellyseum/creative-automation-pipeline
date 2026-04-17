@@ -39,8 +39,8 @@ export class HeroGeneratorAgent implements Agent<HeroGeneratorInput, HeroGenerat
       n: 1,
     });
 
-    // Track the generation cost in the run context
-    ctx.costs.add(this.name, image.costUsdEst, image.provider);
+    // Cost tracking is handled by the orchestrator (which knows the productId).
+    // The agent returns the cost estimate in the image metadata.
 
     return { image };
   }

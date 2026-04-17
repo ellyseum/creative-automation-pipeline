@@ -312,6 +312,9 @@ async function resolveHero(
     }, { productId: product.id });
     heroBytes = genResult.image.bytes;
 
+    // Attribute generation cost to the correct product
+    ctx.costs.add('hero-generator', genResult.image.costUsdEst, genResult.image.provider, product.id);
+
     // Brand Auditor — check the generated hero
     const auditResult = await ctx.invoke(auditorAgent, {
       image: heroBytes,
