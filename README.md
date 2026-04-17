@@ -188,14 +188,23 @@ npm run test:unit           # unit only (no API calls)
 npm run test:watch          # watch mode
 ```
 
-Test tiers:
-| Tier | Count | What | Dependencies |
-|------|-------|------|-------------|
-| Unit | 28 | Brief schema, cost tracker, asset index, FS storage, audit writer | None |
-| CLI E2E | 1 | Full pipeline stub run, output structure verification | None |
-| API E2E | 6 | Express server job lifecycle, all endpoints | Starts/stops server |
-| Azurite | 7 | Azure Blob Storage CRUD | docker-compose up |
-| Playwright | 4 | Frontend UI: brief select, run, results grid, past runs | Starts/stops server + browser |
+### Test Results Matrix
+
+46 tests across 5 tiers. CI runs on Node 20 + 22 via GitHub Actions.
+
+| Tier | Tests | Status | What | Dependencies |
+|------|-------|--------|------|-------------|
+| **Unit** | 28 | Pass | Brief schema validation, cost tracker accumulation/groupBy, asset index cosine similarity + ranking, FS storage CRUD, audit writer JSONL + artifacts | None |
+| **CLI E2E** | 1 | Pass | Full pipeline stub run: 6 PNGs + manifest + report + audit.jsonl verified in temp dir | None |
+| **API E2E** | 6 | Pass | Express server lifecycle: POST /api/run → poll job → completed, all data endpoints, static serving, frontend HTML | Auto-starts server (random port) |
+| **Azurite** | 7 | Pass | Azure Blob Storage: put/get text, put/get binary PNG, exists, list prefix, delete, URL response | docker-compose up (skipped if unavailable) |
+| **Playwright** | 4 | Pass | Browser UI: page load, brief dropdown populated, run pipeline → 6 creative cards with badges, past runs navigation | Auto-starts server + Chromium |
+
+### Pre-commit / Pre-push Hooks
+
+Husky enforces code quality on every commit:
+- **Pre-commit**: lint-staged runs Prettier + ESLint on changed `.ts` files
+- **Pre-push**: `npm test` runs unit + CLI E2E (29 tests, ~3s)
 
 ## Key Design Decisions
 
