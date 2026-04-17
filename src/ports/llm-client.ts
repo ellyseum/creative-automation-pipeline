@@ -10,7 +10,7 @@
  * and auditable at every step.
  */
 
-import type { ZodSchema } from 'zod';
+import type { ZodType } from 'zod';
 
 // A message in a conversation — matches the OpenAI-style role/content shape
 // that both Gemini and OpenAI SDKs understand.
@@ -53,7 +53,7 @@ export interface LLMClient {
   complete(opts: {
     system: string;
     messages: LLMMessage[];
-    schema?: ZodSchema;           // if provided, model returns JSON matching this schema
+    schema?: ZodType;           // if provided, model returns JSON matching this schema
     tools?: ToolDeclaration[];    // if provided, model may return tool_calls
     forceToolUse?: boolean;       // if true, model MUST call a tool
   }): Promise<LLMResponse>;
@@ -71,7 +71,7 @@ export interface MultimodalLLMClient {
     image: Buffer;
     mimeType: string;             // "image/png" | "image/jpeg"
     prompt: string;
-    schema?: ZodSchema;           // structured output schema
+    schema?: ZodType;           // structured output schema
   }): Promise<{ text: string; tokens: { prompt: number; completion: number }; model: string }>;
 }
 
