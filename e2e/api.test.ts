@@ -10,7 +10,7 @@ import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dirname, '..');
-const PORT = 3099;  // use a non-standard port to avoid conflicts
+const PORT = 3099; // use a non-standard port to avoid conflicts
 const BASE = `http://localhost:${PORT}`;
 
 let server: ChildProcess;
@@ -35,7 +35,7 @@ describe('API E2E', () => {
         await fetch(`${BASE}/api/briefs`, { signal: AbortSignal.timeout(500) });
         break;
       } catch {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
   }, 30000);
@@ -80,7 +80,7 @@ describe('API E2E', () => {
       const resp = await api(`/api/jobs/${jobId}`);
       job = await resp.json();
       if (job.status === 'completed' || job.status === 'failed') break;
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     expect(job.status).toBe('completed');

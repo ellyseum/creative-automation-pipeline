@@ -35,15 +35,12 @@ describe('Pipeline E2E (stub mode)', () => {
     const briefPath = join(projectRoot, 'briefs', 'example.yaml');
 
     const runId = `test-e2e-${Date.now()}`;
-    execSync(
-      `npx tsx src/cli.ts run "${briefPath}" --run-id "${runId}" -o "${tmpDir}"`,
-      {
-        cwd: projectRoot,
-        env: { ...process.env, IMAGE_PROVIDER: 'stub', LOG_LEVEL: 'warn' },
-        timeout: 30000,
-        stdio: 'pipe',
-      },
-    );
+    execSync(`npx tsx src/cli.ts run "${briefPath}" --run-id "${runId}" -o "${tmpDir}"`, {
+      cwd: projectRoot,
+      env: { ...process.env, IMAGE_PROVIDER: 'stub', LOG_LEVEL: 'warn' },
+      timeout: 30000,
+      stdio: 'pipe',
+    });
 
     const runDir = join(tmpDir, runId);
 
@@ -84,12 +81,12 @@ describe('Pipeline E2E (stub mode)', () => {
     const creativesDir = join(runDir, 'creatives');
     const products = await readdir(creativesDir);
     // Filter out _intermediate
-    const productDirs = products.filter(p => !p.startsWith('_'));
+    const productDirs = products.filter((p) => !p.startsWith('_'));
     expect(productDirs.sort()).toEqual(['dawn-brew', 'solar-flask']);
 
     for (const product of productDirs) {
       const files = await readdir(join(creativesDir, product));
-      const pngs = files.filter(f => f.endsWith('.png'));
+      const pngs = files.filter((f) => f.endsWith('.png'));
       expect(pngs.sort()).toEqual(['16x9.png', '1x1.png', '9x16.png']);
 
       // Each PNG should be a real image (non-zero size)
@@ -103,5 +100,5 @@ describe('Pipeline E2E (stub mode)', () => {
     const auditDir = join(runDir, '_audit');
     const auditDirs = await readdir(auditDir);
     expect(auditDirs.length).toBeGreaterThan(5);
-  }, 60000);  // 60s timeout for the full stub pipeline
+  }, 60000); // 60s timeout for the full stub pipeline
 });

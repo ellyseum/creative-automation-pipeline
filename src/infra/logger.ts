@@ -12,10 +12,10 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, e
 
 // ANSI color codes for terminal output
 const COLORS: Record<LogLevel, string> = {
-  debug: '\x1b[90m',   // gray
-  info: '\x1b[36m',    // cyan
-  warn: '\x1b[33m',    // yellow
-  error: '\x1b[31m',   // red
+  debug: '\x1b[90m', // gray
+  info: '\x1b[36m', // cyan
+  warn: '\x1b[33m', // yellow
+  error: '\x1b[31m', // red
 };
 const RESET = '\x1b[0m';
 const GREEN = '\x1b[32m';
@@ -42,10 +42,18 @@ export class Logger {
     process.stderr.write(JSON.stringify(entry) + '\n');
   }
 
-  debug(tag: string, msg: string, data?: Record<string, unknown>): void { this.log('debug', tag, msg, data); }
-  info(tag: string, msg: string, data?: Record<string, unknown>): void { this.log('info', tag, msg, data); }
-  warn(tag: string, msg: string, data?: Record<string, unknown>): void { this.log('warn', tag, msg, data); }
-  error(tag: string, msg: string, data?: Record<string, unknown>): void { this.log('error', tag, msg, data); }
+  debug(tag: string, msg: string, data?: Record<string, unknown>): void {
+    this.log('debug', tag, msg, data);
+  }
+  info(tag: string, msg: string, data?: Record<string, unknown>): void {
+    this.log('info', tag, msg, data);
+  }
+  warn(tag: string, msg: string, data?: Record<string, unknown>): void {
+    this.log('warn', tag, msg, data);
+  }
+  error(tag: string, msg: string, data?: Record<string, unknown>): void {
+    this.log('error', tag, msg, data);
+  }
 
   // Convenience: success checkmark for completed steps
   success(tag: string, msg: string): void {

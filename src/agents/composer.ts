@@ -29,13 +29,13 @@ import { ASPECT_RATIOS } from '../domain/creative.js';
 export interface ComposerInput {
   productId: string;
   heroImage: Buffer;
-  aspectRatio: string;            // "1:1", "9:16", "16:9"
-  message: string;                // localized campaign message
-  logoImage: Buffer;              // brand logo PNG
-  brandPalette: string[];         // hex colors for the overlay bar
-  compositionNotes?: string;      // from Creative Director (placement hints)
-  retryHint?: string;             // from Brand Auditor (readability feedback)
-  fontPath?: string;              // path to brand display font (optional)
+  aspectRatio: string; // "1:1", "9:16", "16:9"
+  message: string; // localized campaign message
+  logoImage: Buffer; // brand logo PNG
+  brandPalette: string[]; // hex colors for the overlay bar
+  compositionNotes?: string; // from Creative Director (placement hints)
+  retryHint?: string; // from Brand Auditor (readability feedback)
+  fontPath?: string; // path to brand display font (optional)
 }
 
 // --- Placement templates per aspect ratio ---
@@ -44,14 +44,14 @@ export interface ComposerInput {
 interface PlacementTemplate {
   name: string;
   // Text bar zone (relative to canvas dimensions)
-  textZoneY: number;     // Y offset (top of text bar)
-  textZoneH: number;     // height of text bar
-  fontSize: number;      // text size in pixels
-  barOpacity: number;    // semi-transparent overlay opacity (0–1)
+  textZoneY: number; // Y offset (top of text bar)
+  textZoneH: number; // height of text bar
+  fontSize: number; // text size in pixels
+  barOpacity: number; // semi-transparent overlay opacity (0–1)
   // Logo position
   logoX: number;
   logoY: number;
-  logoSize: number;      // width = height (square)
+  logoSize: number; // width = height (square)
 }
 
 // Templates account for platform UI overlays:
@@ -60,21 +60,33 @@ interface PlacementTemplate {
 const TEMPLATES: Record<string, PlacementTemplate> = {
   '1:1': {
     name: '1:1-default',
-    textZoneY: 780, textZoneH: 220, fontSize: 64,
+    textZoneY: 780,
+    textZoneH: 220,
+    fontSize: 64,
     barOpacity: 0.7,
-    logoX: 900, logoY: 60, logoSize: 120,
+    logoX: 900,
+    logoY: 60,
+    logoSize: 120,
   },
   '9:16': {
     name: '9:16-default',
-    textZoneY: 1100, textZoneH: 320, fontSize: 72,
+    textZoneY: 1100,
+    textZoneH: 320,
+    fontSize: 72,
     barOpacity: 0.75,
-    logoX: 900, logoY: 320, logoSize: 120,  // below notch-safe zone
+    logoX: 900,
+    logoY: 320,
+    logoSize: 120, // below notch-safe zone
   },
   '16:9': {
     name: '16:9-default',
-    textZoneY: 820, textZoneH: 180, fontSize: 48,
+    textZoneY: 820,
+    textZoneH: 180,
+    fontSize: 48,
     barOpacity: 0.7,
-    logoX: 60, logoY: 60, logoSize: 120,
+    logoX: 60,
+    logoY: 60,
+    logoSize: 120,
   },
 };
 
@@ -85,7 +97,9 @@ function pickDarkest(palette: string[]): { r: number; g: number; b: number } {
 
   for (const hex of palette) {
     const n = parseInt(hex.replace('#', ''), 16);
-    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const r = (n >> 16) & 255,
+      g = (n >> 8) & 255,
+      b = n & 255;
     // Perceived luminance (ITU-R BT.601)
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     if (lum < minLuminance) {
@@ -101,11 +115,7 @@ function pickDarkest(palette: string[]): { r: number; g: number; b: number } {
 // works reliably for system fonts and keeps dependencies simpler for the PoC.
 function renderTextSvg(text: string, width: number, height: number, fontSize: number): Buffer {
   // Escape XML entities in the message text
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <text x="50%" y="50%"
@@ -126,7 +136,7 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
     if (!spec) throw new Error(`Unknown aspect ratio: ${input.aspectRatio}`);
 
     // Resolve placement template — start with ratio default, apply overrides
-    const template = { ...TEMPLATES[input.aspectRatio] ?? TEMPLATES['1:1'] };
+    const template = { ...(TEMPLATES[input.aspectRatio] ?? TEMPLATES['1:1']) };
     const overridesApplied: string[] = [];
 
     // Apply retry hint — Brand Auditor may request increased contrast
@@ -139,7 +149,7 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
     const resized = await sharp(input.heroImage)
       .resize(spec.width, spec.height, {
         fit: 'cover',
-        position: sharp.strategy.attention,  // luminance + saturation + skin tone
+        position: sharp.strategy.attention, // luminance + saturation + skin tone
       })
       .toBuffer();
 
@@ -152,12 +162,12 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
         channels: 4,
         background: { ...barColor, alpha: template.barOpacity },
       },
-    }).png().toBuffer();
+    })
+      .png()
+      .toBuffer();
 
     // 3. Render campaign message text as SVG overlay
-    const textSvg = renderTextSvg(
-      input.message, spec.width, template.textZoneH, template.fontSize,
-    );
+    const textSvg = renderTextSvg(input.message, spec.width, template.textZoneH, template.fontSize);
 
     // 4. Resize logo to template size (preserving aspect ratio)
     const logoResized = await sharp(input.logoImage)
@@ -191,8 +201,8 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
       productId: input.productId,
       aspectRatio: input.aspectRatio,
       outputPath,
-      heroSource: 'generated',  // overwritten by orchestrator
-      heroPath: '',             // set by orchestrator
+      heroSource: 'generated', // overwritten by orchestrator
+      heroPath: '', // set by orchestrator
       textRendered: input.message,
       compositionDetails: {
         template: template.name,

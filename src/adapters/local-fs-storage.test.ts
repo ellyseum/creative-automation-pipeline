@@ -52,8 +52,8 @@ describe('LocalFsStorage', () => {
 
     const listed = await storage.list('assets');
     expect(listed).toHaveLength(2);
-    expect(listed.some(p => p.includes('a.jpg'))).toBe(true);
-    expect(listed.some(p => p.includes('b.jpg'))).toBe(true);
+    expect(listed.some((p) => p.includes('a.jpg'))).toBe(true);
+    expect(listed.some((p) => p.includes('b.jpg'))).toBe(true);
   });
 
   it('list returns empty for missing prefix', async () => {

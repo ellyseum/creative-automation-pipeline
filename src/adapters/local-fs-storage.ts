@@ -12,7 +12,7 @@ import type { Storage } from '../ports/storage.js';
 
 export class LocalFsStorage implements Storage {
   readonly name = 'local-fs';
-  private baseDir: string;  // root directory for all reads/writes
+  private baseDir: string; // root directory for all reads/writes
 
   constructor(baseDir: string = process.cwd()) {
     this.baseDir = baseDir;
@@ -41,15 +41,15 @@ export class LocalFsStorage implements Storage {
     try {
       const entries = await readdir(dir, { recursive: true, withFileTypes: true });
       return entries
-        .filter(e => e.isFile())
-        .map(e => {
+        .filter((e) => e.isFile())
+        .map((e) => {
           // Build relative path from prefix
           const parent = e.parentPath || e.path || '';
           const rel = parent.replace(dir, '').replace(/^[\\/]/, '');
           return join(prefix, rel, e.name);
         });
     } catch {
-      return [];  // directory doesn't exist — no assets
+      return []; // directory doesn't exist — no assets
     }
   }
 

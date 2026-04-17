@@ -46,7 +46,7 @@ export class AzureBlobStorage implements Storage {
       await this.container().getBlockBlobClient(key).getProperties();
       return true;
     } catch {
-      return false;  // 404 → doesn't exist
+      return false; // 404 → doesn't exist
     }
   }
 

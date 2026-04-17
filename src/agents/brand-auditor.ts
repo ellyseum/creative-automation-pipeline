@@ -27,8 +27,8 @@ export interface BrandAuditorInput {
   mimeType: string;
   brandPalette: string[];
   brandTone?: string;
-  paletteDominanceThreshold?: number;  // default: 0.3 (30%)
-  isHeroCheck?: boolean;   // true = checking raw hero, false = checking final creative
+  paletteDominanceThreshold?: number; // default: 0.3 (30%)
+  isHeroCheck?: boolean; // true = checking raw hero, false = checking final creative
 }
 
 // Zod schema for the semantic LLM check
@@ -65,7 +65,7 @@ async function analyzePaletteDominance(image: Buffer, palette: string[]): Promis
 
   const brandColors = palette.map(hexToRgb);
   const totalPixels = info.width * info.height;
-  const channels = info.channels;  // 3 (RGB) or 4 (RGBA)
+  const channels = info.channels; // 3 (RGB) or 4 (RGBA)
   let matchingPixels = 0;
 
   // Threshold: a pixel "matches" a brand color if within this RGB distance.
@@ -75,7 +75,7 @@ async function analyzePaletteDominance(image: Buffer, palette: string[]): Promis
   for (let i = 0; i < data.length; i += channels) {
     const pixel = { r: data[i], g: data[i + 1], b: data[i + 2] };
     // Check if this pixel is close to ANY brand palette color
-    if (brandColors.some(bc => colorDistance(pixel, bc) < MATCH_THRESHOLD)) {
+    if (brandColors.some((bc) => colorDistance(pixel, bc) < MATCH_THRESHOLD)) {
       matchingPixels++;
     }
   }
@@ -98,8 +98,12 @@ export class BrandAuditorAgent implements Agent<BrandAuditorInput, BrandCheckRes
       return {
         verdict: 'fail',
         paletteDominance,
-        issues: [`Brand palette colors represent only ${(paletteDominance * 100).toFixed(1)}% of the image (threshold: ${(threshold * 100).toFixed(0)}%).`],
-        suggestions: [`Increase brand color saturation in the prompt. Add "${input.brandPalette.join(', ')}" as explicit color cues.`],
+        issues: [
+          `Brand palette colors represent only ${(paletteDominance * 100).toFixed(1)}% of the image (threshold: ${(threshold * 100).toFixed(0)}%).`,
+        ],
+        suggestions: [
+          `Increase brand color saturation in the prompt. Add "${input.brandPalette.join(', ')}" as explicit color cues.`,
+        ],
       };
     }
 
@@ -127,12 +131,13 @@ export class BrandAuditorAgent implements Agent<BrandAuditorInput, BrandCheckRes
     // Combine deterministic + semantic results
     const issues = [...semantic.issues];
     if (!palettePass) {
-      issues.unshift(`Deterministic palette check: ${(paletteDominance * 100).toFixed(1)}% brand colors (threshold: ${(threshold * 100).toFixed(0)}%)`);
+      issues.unshift(
+        `Deterministic palette check: ${(paletteDominance * 100).toFixed(1)}% brand colors (threshold: ${(threshold * 100).toFixed(0)}%)`,
+      );
     }
 
-    const verdict = semantic.severity === 'major' || !palettePass ? 'fail'
-      : semantic.severity === 'minor' ? 'warn'
-      : 'pass';
+    const verdict =
+      semantic.severity === 'major' || !palettePass ? 'fail' : semantic.severity === 'minor' ? 'warn' : 'pass';
 
     return {
       verdict,

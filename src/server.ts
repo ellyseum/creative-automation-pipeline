@@ -79,9 +79,7 @@ app.get('/api/jobs/:id', (req, res) => {
 
 // GET /api/jobs — list all jobs
 app.get('/api/jobs', (_req, res) => {
-  const all = [...jobs.values()].sort((a, b) =>
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const all = [...jobs.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   res.json({ jobs: all });
 });
 
@@ -89,7 +87,10 @@ app.get('/api/jobs', (_req, res) => {
 app.get('/api/runs', async (_req, res) => {
   try {
     const dirs = await readdir('output');
-    const runs = dirs.filter(d => d.startsWith('run-')).sort().reverse();
+    const runs = dirs
+      .filter((d) => d.startsWith('run-'))
+      .sort()
+      .reverse();
     res.json({ runs });
   } catch {
     res.json({ runs: [] });
@@ -109,7 +110,7 @@ app.get('/api/runs/:id', async (req, res) => {
 // GET /api/briefs — list available brief files
 app.get('/api/briefs', async (_req, res) => {
   const files = await readdir('briefs');
-  res.json({ briefs: files.filter(f => f.endsWith('.yaml') || f.endsWith('.yml')) });
+  res.json({ briefs: files.filter((f) => f.endsWith('.yaml') || f.endsWith('.yml')) });
 });
 
 // GET /api/runs/:id/creatives — list creative files for a run
@@ -121,7 +122,7 @@ app.get('/api/runs/:id/creatives', async (req, res) => {
     for (const product of products) {
       if (product.startsWith('_')) continue; // skip _intermediate
       const files = await readdir(join(creativesDir, product));
-      result[product] = files.filter(f => f.endsWith('.png'));
+      result[product] = files.filter((f) => f.endsWith('.png'));
     }
     res.json({ runId: req.params.id, creatives: result });
   } catch {
@@ -133,7 +134,11 @@ app.get('/api/runs/:id/creatives', async (req, res) => {
 app.get('/api/runs/:id/audit', async (req, res) => {
   try {
     const data = await readFile(join('output', req.params.id, 'audit.jsonl'), 'utf-8');
-    const entries = data.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    const entries = data
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((l) => JSON.parse(l));
     res.json({ runId: req.params.id, invocations: entries });
   } catch {
     res.status(404).json({ error: 'Audit log not found' });

@@ -28,7 +28,7 @@ export class ImagenGeneratorAdapter implements ImageGenerator {
     // Imagen prefers aspectRatio over explicit width/height.
     // Map our request to the supported ratio format.
     const aspectRatio = req.aspectRatio ?? '1:1';
-    const n = Math.min(req.n ?? 1, 4);  // Imagen max: 4 images per request
+    const n = Math.min(req.n ?? 1, 4); // Imagen max: 4 images per request
 
     const resp = await this.ai.models.generateImages({
       model: this.model,
@@ -42,7 +42,7 @@ export class ImagenGeneratorAdapter implements ImageGenerator {
     });
 
     // Decode each generated image from base64 to Buffer
-    return (resp.generatedImages ?? []).map(img => ({
+    return (resp.generatedImages ?? []).map((img) => ({
       bytes: Buffer.from(img.image!.imageBytes!, 'base64'),
       mimeType: 'image/png',
       provider: this.name,

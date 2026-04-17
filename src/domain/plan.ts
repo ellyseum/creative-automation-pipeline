@@ -14,22 +14,22 @@ export type ProductStrategy = 'reuse' | 'hybrid' | 'generate';
 
 // Per-product plan entry — one per product in the brief.
 export interface ProductPlan {
-  productId: string;                     // matches Product.id in the brief
+  productId: string; // matches Product.id in the brief
   strategy: ProductStrategy;
 
   // For 'reuse': the asset path that matched with high confidence
   assetPath?: string;
-  assetSimilarity?: number;              // 0–1 similarity score from retrieval
+  assetSimilarity?: number; // 0–1 similarity score from retrieval
 
   // For 'hybrid': a reference asset to anchor the generation style
   referenceAssetPath?: string;
-  referenceRationale?: string;           // why this reference was chosen
+  referenceRationale?: string; // why this reference was chosen
 
   // For 'generate' and 'hybrid': the creative direction for the Prompt Engineer
-  generationDirection?: string;          // prose describing what to generate
+  generationDirection?: string; // prose describing what to generate
 
   // Composition hints for the Composer agent (aspect-ratio-specific placement)
-  compositionNotes?: string;             // e.g., "subject centered, overlay bottom-third"
+  compositionNotes?: string; // e.g., "subject centered, overlay bottom-third"
 
   // Director's reasoning — recorded for audit trail
   rationale: string;

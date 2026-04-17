@@ -17,7 +17,9 @@ import type { IndexedAsset, AssetMatch, AssetIndexFile } from '../domain/asset-m
 // Cosine similarity between two vectors — the core of in-memory RAG.
 // 8 lines, sub-millisecond for any demo-scale dataset.
 function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0, magA = 0, magB = 0;
+  let dot = 0,
+    magA = 0,
+    magB = 0;
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
     magA += a[i] * a[i];
@@ -30,7 +32,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 export class JsonAssetIndex implements AssetIndex {
   readonly name = 'json-asset-index';
   private indexPath: string;
-  private assets: Map<string, IndexedAsset> = new Map();  // keyed by path
+  private assets: Map<string, IndexedAsset> = new Map(); // keyed by path
   private embeddingModel = '';
   private embeddingDims = 0;
 
@@ -74,7 +76,7 @@ export class JsonAssetIndex implements AssetIndex {
       this.embeddingDims = asset.embedding.length;
     }
     if (!this.embeddingModel) {
-      this.embeddingModel = 'gemini-embedding-001';  // default for this pipeline
+      this.embeddingModel = 'gemini-embedding-001'; // default for this pipeline
     }
   }
 
@@ -103,9 +105,7 @@ export class JsonAssetIndex implements AssetIndex {
     }
 
     // Sort by similarity descending, return top-k
-    return matches
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, k);
+    return matches.sort((a, b) => b.similarity - a.similarity).slice(0, k);
   }
 
   // Get all indexed asset paths — for diffing against storage to find new/removed assets.

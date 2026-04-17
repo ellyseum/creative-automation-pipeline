@@ -17,14 +17,14 @@ import type { ZodType } from 'zod';
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string | Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }>;
-  toolCallId?: string;            // for role='tool' responses
+  toolCallId?: string; // for role='tool' responses
 }
 
 // A function/tool declaration for tool-calling agents (e.g., Creative Director).
 export interface ToolDeclaration {
   name: string;
   description: string;
-  parameters: Record<string, unknown>;   // JSON Schema object
+  parameters: Record<string, unknown>; // JSON Schema object
 }
 
 // A tool call returned by the model.
@@ -36,8 +36,8 @@ export interface ToolCall {
 
 // Result of a complete() call — either text or tool calls (not both).
 export interface LLMResponse {
-  text?: string;                  // present when model returns text
-  toolCalls?: ToolCall[];         // present when model wants to call tools
+  text?: string; // present when model returns text
+  toolCalls?: ToolCall[]; // present when model wants to call tools
   tokens: { prompt: number; completion: number };
   model: string;
 }
@@ -53,9 +53,9 @@ export interface LLMClient {
   complete(opts: {
     system: string;
     messages: LLMMessage[];
-    schema?: ZodType;           // if provided, model returns JSON matching this schema
-    tools?: ToolDeclaration[];    // if provided, model may return tool_calls
-    forceToolUse?: boolean;       // if true, model MUST call a tool
+    schema?: ZodType; // if provided, model returns JSON matching this schema
+    tools?: ToolDeclaration[]; // if provided, model may return tool_calls
+    forceToolUse?: boolean; // if true, model MUST call a tool
   }): Promise<LLMResponse>;
 }
 
@@ -69,9 +69,9 @@ export interface MultimodalLLMClient {
   // Analyze an image with a prompt, return structured output.
   analyzeImage(opts: {
     image: Buffer;
-    mimeType: string;             // "image/png" | "image/jpeg"
+    mimeType: string; // "image/png" | "image/jpeg"
     prompt: string;
-    schema?: ZodType;           // structured output schema
+    schema?: ZodType; // structured output schema
   }): Promise<{ text: string; tokens: { prompt: number; completion: number }; model: string }>;
 }
 

@@ -72,19 +72,18 @@ export class RunContext {
    * parameter links invocations to products/ratios and supports
    * parent-child relationships for retries and sub-calls.
    */
-  async invoke<I, O>(
-    agent: Agent<I, O>,
-    input: I,
-    scope?: InvocationScope,
-  ): Promise<O> {
+  async invoke<I, O>(agent: Agent<I, O>, input: I, scope?: InvocationScope): Promise<O> {
     const invocationId = randomUUID();
     const startedAt = new Date().toISOString();
     const startMs = Date.now();
 
     // Write input artifact to audit storage
-    const inputStr = typeof input === 'string' ? input
-      : input instanceof Buffer ? `<Buffer ${input.length} bytes>`
-      : JSON.stringify(input, null, 2);
+    const inputStr =
+      typeof input === 'string'
+        ? input
+        : input instanceof Buffer
+          ? `<Buffer ${input.length} bytes>`
+          : JSON.stringify(input, null, 2);
     const inputRef = await this.audit.writeArtifact(invocationId, 'input.json', inputStr);
 
     const inv: Partial<AgentInvocation> = {
@@ -96,9 +95,10 @@ export class RunContext {
       aspectRatio: scope?.aspectRatio,
       startedAt,
       inputRef,
-      inputSummary: typeof input === 'object' && input !== null && !(input instanceof Buffer)
-        ? this.summarize(input as Record<string, unknown>)
-        : undefined,
+      inputSummary:
+        typeof input === 'object' && input !== null && !(input instanceof Buffer)
+          ? this.summarize(input as Record<string, unknown>)
+          : undefined,
     };
 
     try {
@@ -106,16 +106,20 @@ export class RunContext {
       const output = await agent.execute(input, this);
 
       // Write output artifact
-      const outputStr = typeof output === 'string' ? output
-        : output instanceof Buffer ? `<Buffer ${output.length} bytes>`
-        : JSON.stringify(output, null, 2);
+      const outputStr =
+        typeof output === 'string'
+          ? output
+          : output instanceof Buffer
+            ? `<Buffer ${output.length} bytes>`
+            : JSON.stringify(output, null, 2);
       const outputRef = await this.audit.writeArtifact(invocationId, 'output.json', outputStr);
 
       inv.status = 'ok';
       inv.outputRef = outputRef;
-      inv.outputSummary = typeof output === 'object' && output !== null && !(output instanceof Buffer)
-        ? this.summarize(output as Record<string, unknown>)
-        : undefined;
+      inv.outputSummary =
+        typeof output === 'object' && output !== null && !(output instanceof Buffer)
+          ? this.summarize(output as Record<string, unknown>)
+          : undefined;
 
       return output;
     } catch (err: unknown) {
@@ -134,7 +138,9 @@ export class RunContext {
 
       // Log to stdout for live progress
       const status = inv.status === 'ok' ? '\x1b[32m\u2713\x1b[0m' : '\x1b[31m\u2717\x1b[0m';
-      const scope_str = scope?.productId ? ` (${scope.productId}${scope.aspectRatio ? ' ' + scope.aspectRatio : ''})` : '';
+      const scope_str = scope?.productId
+        ? ` (${scope.productId}${scope.aspectRatio ? ' ' + scope.aspectRatio : ''})`
+        : '';
       const dur = `${inv.durationMs}ms`;
       const cost = inv.costUsdEst ? ` $${inv.costUsdEst.toFixed(4)}` : '';
       this.logger.info(agent.name, `${status}${scope_str} ${dur}${cost}`);
@@ -150,7 +156,7 @@ export class RunContext {
     const summary: Record<string, unknown> = {};
     let count = 0;
     for (const [key, val] of Object.entries(obj)) {
-      if (count >= 5) break;  // max 5 fields in summary
+      if (count >= 5) break; // max 5 fields in summary
       if (typeof val === 'string' && val.length > 100) {
         summary[key] = val.slice(0, 97) + '...';
       } else if (Array.isArray(val)) {

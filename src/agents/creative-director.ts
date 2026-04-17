@@ -52,7 +52,8 @@ const CreativePlanSchema = z.object({
 // Tool declaration for search_assets
 const searchAssetsTool = {
   name: 'search_assets',
-  description: 'Search the brand asset library for relevant images. Returns up to 5 matches with similarity scores and metadata.',
+  description:
+    'Search the brand asset library for relevant images. Returns up to 5 matches with similarity scores and metadata.',
   parameters: {
     type: 'object' as const,
     properties: {
@@ -85,10 +86,7 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
    * Phase 1: Use tool calling to let the LLM explore the asset library.
    * Returns accumulated search results for all queries the model made.
    */
-  private async discoverAssets(
-    brief: Brief,
-    ctx: RunContext,
-  ): Promise<Map<string, AssetMatch[]>> {
+  private async discoverAssets(brief: Brief, ctx: RunContext): Promise<Map<string, AssetMatch[]>> {
     const results = new Map<string, AssetMatch[]>();
 
     const system = [
@@ -130,7 +128,7 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
             results.set(query, matches);
 
             // Send results back to the conversation
-            const formatted = matches.map(m => ({
+            const formatted = matches.map((m) => ({
               path: m.path,
               similarity: Math.round(m.similarity * 100) / 100,
               description: m.metadata.description,
@@ -206,8 +204,9 @@ export class CreativeDirectorAgent implements Agent<CreativeDirectorInput, Creat
       `Brand palette: ${brief.brand.palette.join(', ')}`,
       '',
       'Products:',
-      ...brief.products.map(p =>
-        `  - ${p.id}: ${p.name} — ${p.description}${p.hero_asset ? ` (has existing hero: ${p.hero_asset})` : ' (no hero — needs retrieval or generation)'}`
+      ...brief.products.map(
+        (p) =>
+          `  - ${p.id}: ${p.name} — ${p.description}${p.hero_asset ? ` (has existing hero: ${p.hero_asset})` : ' (no hero — needs retrieval or generation)'}`,
       ),
     ].join('\n');
   }

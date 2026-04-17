@@ -39,7 +39,7 @@ export class FireflyGeneratorAdapter implements ImageGenerator {
       FireflyClient = mod.FireflyClient;
     } catch {
       throw new Error(
-        'FireflyProvider requires @adobe/firefly-apis. Install with: npm install @adobe/firefly-apis @adobe/firefly-services-common-apis'
+        'FireflyProvider requires @adobe/firefly-apis. Install with: npm install @adobe/firefly-apis @adobe/firefly-services-common-apis',
       );
     }
 
@@ -55,11 +55,9 @@ export class FireflyGeneratorAdapter implements ImageGenerator {
     const resp = await client.generateImages({
       prompt: req.prompt,
       numVariations: req.n ?? 1,
-      size: req.width && req.height
-        ? { width: req.width, height: req.height }
-        : { width: 1024, height: 1024 },
+      size: req.width && req.height ? { width: req.width, height: req.height } : { width: 1024, height: 1024 },
       negativePrompt: req.negativePrompt,
-      contentClass: 'photo',  // optimize for photographic output
+      contentClass: 'photo', // optimize for photographic output
     });
 
     // Firefly returns pre-signed URLs that expire in 1 hour.
@@ -78,7 +76,7 @@ export class FireflyGeneratorAdapter implements ImageGenerator {
 
       images.push({
         bytes,
-        mimeType: 'image/jpeg',  // Firefly returns JPEG by default
+        mimeType: 'image/jpeg', // Firefly returns JPEG by default
         provider: this.name,
         model: 'firefly-v3',
         costUsdEst: COST_PER_IMAGE_USD,

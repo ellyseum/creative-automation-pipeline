@@ -72,7 +72,10 @@ export async function generateCreatives(briefPath: string, ctx: RunContext): Pro
   const brief: Brief = BriefSchema.parse(parsed);
   const ratios = brief.aspect_ratios ?? [...DEFAULT_ASPECT_RATIOS];
 
-  ctx.logger.success('brief', `${brief.campaign.name} · ${brief.region} · ${brief.products.length} products · ${ratios.length} ratios`);
+  ctx.logger.success(
+    'brief',
+    `${brief.campaign.name} · ${brief.region} · ${brief.products.length} products · ${ratios.length} ratios`,
+  );
 
   // ========== STEP 2: Load brand assets ==========
   ctx.logger.info('brand', 'Loading brand assets...');
@@ -87,13 +90,13 @@ export async function generateCreatives(briefPath: string, ctx: RunContext): Pro
   // ========== STEP 4: Creative Director → plan ==========
   const directorAgent = new CreativeDirectorAgent();
   const plan = await ctx.invoke(directorAgent, { brief });
-  ctx.logger.success('plan', plan.products.map(p => `${p.productId}: ${p.strategy}`).join(', '));
+  ctx.logger.success('plan', plan.products.map((p) => `${p.productId}: ${p.strategy}`).join(', '));
 
   // ========== STEP 5+6: Per product, resolve hero + compose per ratio ==========
   const allProductVariants: ProductVariants[] = [];
 
   for (const productPlan of plan.products) {
-    const product = brief.products.find(p => p.id === productPlan.productId);
+    const product = brief.products.find((p) => p.id === productPlan.productId);
     if (!product) {
       ctx.logger.warn('pipeline', `Product ${productPlan.productId} in plan but not in brief — skipping`);
       continue;
@@ -105,9 +108,7 @@ export async function generateCreatives(briefPath: string, ctx: RunContext): Pro
     const heroResult = await resolveHero(product, productPlan, brief, brandAssets, ctx);
 
     // Compose per aspect ratio
-    const variants = await composeAllRatios(
-      product, heroResult, ratios, brief, brandAssets, ctx,
-    );
+    const variants = await composeAllRatios(product, heroResult, ratios, brief, brandAssets, ctx);
 
     allProductVariants.push({
       productId: product.id,
@@ -161,9 +162,9 @@ export async function generateCreatives(briefPath: string, ctx: RunContext): Pro
   // ========== Summary ==========
   ctx.logger.summary(
     `Done: ${manifest.stats.totalCreatives} creatives, ` +
-    `${manifest.stats.totalGenerations} generated, ` +
-    `${manifest.stats.totalRetries} retries, ` +
-    `$${manifest.costSummary.totalUsdEst.toFixed(4)} est`
+      `${manifest.stats.totalGenerations} generated, ` +
+      `${manifest.stats.totalRetries} retries, ` +
+      `$${manifest.costSummary.totalUsdEst.toFixed(4)} est`,
   );
 
   return manifest;
@@ -271,7 +272,10 @@ async function resolveHero(
         };
       }
       // Asset declared but doesn't exist in storage — warn and fall through to Director strategy
-      ctx.logger.warn(product.id, `hero_asset "${product.hero_asset}" not found in storage — falling back to Director strategy`);
+      ctx.logger.warn(
+        product.id,
+        `hero_asset "${product.hero_asset}" not found in storage — falling back to Director strategy`,
+      );
     } catch (err) {
       ctx.logger.warn(product.id, `Failed to load hero_asset "${product.hero_asset}": ${(err as Error).message}`);
     }
@@ -314,38 +318,50 @@ async function resolveHero(
 
   for (let attempt = 0; attempt <= MAX_HERO_RETRIES; attempt++) {
     // Prompt Engineer — craft the diffusion prompt
-    lastPromptOutput = await ctx.invoke(promptAgent, {
-      productId: product.id,
-      productName: product.name,
-      productDescription: product.description,
-      generationDirection: plan.generationDirection ?? product.description,
-      brandTone: brief.brand.tone,
-      brandPalette: brief.brand.palette,
-      audience: brief.audience,
-      region: brief.region,
-      referenceDescription,
-      retryFeedback,
-    }, { productId: product.id });
+    lastPromptOutput = await ctx.invoke(
+      promptAgent,
+      {
+        productId: product.id,
+        productName: product.name,
+        productDescription: product.description,
+        generationDirection: plan.generationDirection ?? product.description,
+        brandTone: brief.brand.tone,
+        brandPalette: brief.brand.palette,
+        audience: brief.audience,
+        region: brief.region,
+        referenceDescription,
+        retryFeedback,
+      },
+      { productId: product.id },
+    );
 
     // Hero Generator — generate the image
     const genStart = Date.now();
-    const genResult = await ctx.invoke(heroAgent, {
-      prompt: lastPromptOutput.prompt,
-      negativePrompt: lastPromptOutput.negativePrompt,
-    }, { productId: product.id });
+    const genResult = await ctx.invoke(
+      heroAgent,
+      {
+        prompt: lastPromptOutput.prompt,
+        negativePrompt: lastPromptOutput.negativePrompt,
+      },
+      { productId: product.id },
+    );
     heroBytes = genResult.image.bytes;
 
     // Attribute generation cost to the correct product
     ctx.costs.add('hero-generator', genResult.image.costUsdEst, genResult.image.provider, product.id);
 
     // Brand Auditor — check the generated hero
-    const auditResult = await ctx.invoke(auditorAgent, {
-      image: heroBytes,
-      mimeType: 'image/png',
-      brandPalette: brief.brand.palette,
-      brandTone: brief.brand.tone,
-      isHeroCheck: true,
-    }, { productId: product.id });
+    const auditResult = await ctx.invoke(
+      auditorAgent,
+      {
+        image: heroBytes,
+        mimeType: 'image/png',
+        brandPalette: brief.brand.palette,
+        brandTone: brief.brand.tone,
+        isHeroCheck: true,
+      },
+      { productId: product.id },
+    );
 
     if (auditResult.verdict !== 'fail') {
       ctx.logger.success(product.id, `Hero ${auditResult.verdict} (attempt ${attempt + 1})`);
@@ -409,12 +425,16 @@ async function composeAllRatios(
   const legalReviewer = new LegalReviewerAgent();
 
   // Localize message once per region (cached inside the agent)
-  const localized = await ctx.invoke(localizerAgent, {
-    message: brief.campaign.message,
-    region: brief.region,
-    audience: brief.audience,
-    brandTone: brief.brand.tone,
-  }, { productId: product.id });
+  const localized = await ctx.invoke(
+    localizerAgent,
+    {
+      message: brief.campaign.message,
+      region: brief.region,
+      audience: brief.audience,
+      brandTone: brief.brand.tone,
+    },
+    { productId: product.id },
+  );
 
   const variants: ProductVariants['variants'] = [];
 
@@ -431,37 +451,49 @@ async function composeAllRatios(
 
     for (let attempt = 0; attempt <= MAX_COMPOSE_RETRIES; attempt++) {
       // Composer — deterministic composition
-      creative = await ctx.invoke(composerAgent, {
-        productId: product.id,
-        heroImage: hero.bytes,
-        aspectRatio: ratio,
-        message: localized.localized,
-        logoImage: brandAssets.logo,
-        brandPalette: brief.brand.palette,
-        compositionNotes: undefined,  // TODO: wire from plan
-        retryHint,
-      }, { productId: product.id, aspectRatio: ratio });
+      creative = await ctx.invoke(
+        composerAgent,
+        {
+          productId: product.id,
+          heroImage: hero.bytes,
+          aspectRatio: ratio,
+          message: localized.localized,
+          logoImage: brandAssets.logo,
+          brandPalette: brief.brand.palette,
+          compositionNotes: undefined, // TODO: wire from plan
+          retryHint,
+        },
+        { productId: product.id, aspectRatio: ratio },
+      );
 
       // Read the composed creative back for auditing — direct fs read since path is absolute
       const composedPath = join(ctx.outputDir, creative.outputPath);
       const composedBytes = await readFile(composedPath);
 
       // Brand Auditor — final creative check
-      brandResult = await ctx.invoke(brandAuditor, {
-        image: composedBytes,
-        mimeType: 'image/png',
-        brandPalette: brief.brand.palette,
-        brandTone: brief.brand.tone,
-        isHeroCheck: false,
-      }, { productId: product.id, aspectRatio: ratio });
+      brandResult = await ctx.invoke(
+        brandAuditor,
+        {
+          image: composedBytes,
+          mimeType: 'image/png',
+          brandPalette: brief.brand.palette,
+          brandTone: brief.brand.tone,
+          isHeroCheck: false,
+        },
+        { productId: product.id, aspectRatio: ratio },
+      );
 
       // Legal Reviewer
-      legalResult = await ctx.invoke(legalReviewer, {
-        image: composedBytes,
-        mimeType: 'image/png',
-        message: localized.localized,
-        region: brief.region,
-      }, { productId: product.id, aspectRatio: ratio });
+      legalResult = await ctx.invoke(
+        legalReviewer,
+        {
+          image: composedBytes,
+          mimeType: 'image/png',
+          message: localized.localized,
+          region: brief.region,
+        },
+        { productId: product.id, aspectRatio: ratio },
+      );
 
       // If brand passes (or we're out of retries), done
       if (brandResult.verdict !== 'fail' || attempt >= MAX_COMPOSE_RETRIES) break;
@@ -490,16 +522,23 @@ async function composeAllRatios(
 
 // --- Helper: Compute aggregate stats ---
 function computeStats(products: ProductVariants[]) {
-  let totalCreatives = 0, totalGenerations = 0, totalRetries = 0;
-  let brandPassed = 0, brandFailed = 0, legalClear = 0, legalFlagged = 0;
+  let totalCreatives = 0,
+    totalGenerations = 0,
+    totalRetries = 0;
+  let brandPassed = 0,
+    brandFailed = 0,
+    legalClear = 0,
+    legalFlagged = 0;
 
   for (const pv of products) {
     if (pv.heroSource === 'generated') totalGenerations++;
     for (const v of pv.variants) {
       totalCreatives++;
       totalRetries += v.retries;
-      if (v.brandCheck.verdict !== 'fail') brandPassed++; else brandFailed++;
-      if (v.legalCheck.verdict === 'clear') legalClear++; else legalFlagged++;
+      if (v.brandCheck.verdict !== 'fail') brandPassed++;
+      else brandFailed++;
+      if (v.legalCheck.verdict === 'clear') legalClear++;
+      else legalFlagged++;
     }
   }
 

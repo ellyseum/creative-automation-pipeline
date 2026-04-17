@@ -6,7 +6,7 @@
  * not halfway through a pipeline run. optional() returns undefined silently.
  */
 
-import 'dotenv/config';  // side-effect: loads .env into process.env
+import 'dotenv/config'; // side-effect: loads .env into process.env
 
 // Require an env var — throws with a clear message if missing.
 // Used for vars that make the pipeline non-functional without (e.g., GEMINI_API_KEY).

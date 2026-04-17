@@ -18,7 +18,7 @@ export class CostTracker {
 
   // Record a cost from an agent invocation.
   add(agent: string, costUsd: number, provider: string, productId?: string): void {
-    if (costUsd <= 0) return;  // skip zero-cost entries (deterministic agents)
+    if (costUsd <= 0) return; // skip zero-cost entries (deterministic agents)
     this.entries.push({ agent, productId, provider, costUsd });
   }
 
@@ -38,7 +38,12 @@ export class CostTracker {
   }
 
   // Full cost summary — written to manifest.json.
-  summary(): { totalUsdEst: number; byAgent: Record<string, number>; byProduct: Record<string, number>; byProvider: Record<string, number> } {
+  summary(): {
+    totalUsdEst: number;
+    byAgent: Record<string, number>;
+    byProduct: Record<string, number>;
+    byProvider: Record<string, number>;
+  } {
     return {
       totalUsdEst: this.totalUsd,
       byAgent: this.groupBy('agent'),

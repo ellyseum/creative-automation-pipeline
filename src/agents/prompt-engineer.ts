@@ -20,13 +20,13 @@ export interface PromptEngineerInput {
   productId: string;
   productName: string;
   productDescription: string;
-  generationDirection: string;   // from CreativePlan.ProductPlan
+  generationDirection: string; // from CreativePlan.ProductPlan
   brandTone?: string;
   brandPalette: string[];
   audience: string;
   region: string;
   referenceDescription?: string; // from the style reference asset's metadata
-  retryFeedback?: string;        // from Brand Auditor on previous attempt (ReAct loop)
+  retryFeedback?: string; // from Brand Auditor on previous attempt (ReAct loop)
 }
 
 // Zod schema for structured prompt output
@@ -75,7 +75,9 @@ export class PromptEngineerAgent implements Agent<PromptEngineerInput, PromptOut
       input.retryFeedback
         ? `\n⚠ PREVIOUS ATTEMPT FAILED BRAND AUDIT. Feedback:\n${input.retryFeedback}\nAdjust the prompt to address this feedback.`
         : '',
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const resp = await ctx.adapters.llm.complete({
       system,

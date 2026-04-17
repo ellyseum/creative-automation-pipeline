@@ -20,8 +20,12 @@ function makeAsset(path: string, embedding: number[]): IndexedAsset {
     analyzedAt: new Date().toISOString(),
     metadata: {
       description: `Asset at ${path}`,
-      tags: [], mood: 'neutral', subjects: [], setting: 'unknown',
-      dominantColors: [], brandElements: { logoPresent: false, textPresent: false },
+      tags: [],
+      mood: 'neutral',
+      subjects: [],
+      setting: 'unknown',
+      dominantColors: [],
+      brandElements: { logoPresent: false, textPresent: false },
       usageHints: [],
     },
     embedding,
@@ -38,9 +42,9 @@ describe('JsonAssetIndex', () => {
   it('ranks by cosine similarity', async () => {
     const idx = new JsonAssetIndex('/tmp/test-embeddings');
     // Three assets pointing in different directions
-    idx.upsert(makeAsset('exact-match', unitVec(3, 0)));     // [1,0,0]
-    idx.upsert(makeAsset('partial-match', [0.7, 0.7, 0]));   // 45 degrees off
-    idx.upsert(makeAsset('orthogonal', unitVec(3, 2)));       // [0,0,1] — 90 degrees off
+    idx.upsert(makeAsset('exact-match', unitVec(3, 0))); // [1,0,0]
+    idx.upsert(makeAsset('partial-match', [0.7, 0.7, 0])); // 45 degrees off
+    idx.upsert(makeAsset('orthogonal', unitVec(3, 2))); // [0,0,1] — 90 degrees off
 
     const results = await idx.search('test', unitVec(3, 0), 3); // query = [1,0,0]
 

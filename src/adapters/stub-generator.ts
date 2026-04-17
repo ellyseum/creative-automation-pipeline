@@ -32,16 +32,15 @@ async function makePlaceholder(prompt: string, width: number, height: number): P
     </svg>
   `);
 
-  return bg.composite([{ input: svg, top: 0, left: 0 }]).png().toBuffer();
+  return bg
+    .composite([{ input: svg, top: 0, left: 0 }])
+    .png()
+    .toBuffer();
 }
 
 // Escape special XML characters in text for SVG embedding
 function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export class StubGeneratorAdapter implements ImageGenerator {

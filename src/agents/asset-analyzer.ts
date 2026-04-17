@@ -20,8 +20,8 @@ import type { AssetMetadata } from '../domain/asset-metadata.js';
 export interface AssetAnalyzerInput {
   image: Buffer;
   mimeType: string;
-  pathHint?: string;    // e.g., "assets/products/solar-flask/hero.jpg"
-  brandName?: string;   // e.g., "Morning Co." — gives the LLM context
+  pathHint?: string; // e.g., "assets/products/solar-flask/hero.jpg"
+  brandName?: string; // e.g., "Morning Co." — gives the LLM context
 }
 
 // Zod schema for structured output — forces the LLM to return this exact shape.

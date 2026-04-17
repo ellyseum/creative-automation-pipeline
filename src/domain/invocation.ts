@@ -13,26 +13,26 @@
  */
 
 export interface AgentInvocation {
-  invocationId: string;           // uuid v7 (time-ordered for natural sort)
-  parentInvocationId?: string;    // causality chain — retries and sub-calls point to parent
-  runId: string;                  // groups all invocations in one pipeline execution
-  agent: string;                  // agent name: "creative-director", "brand-auditor", etc.
-  productId?: string;             // if scoped to a specific product
-  aspectRatio?: string;           // if scoped to a specific variant
-  startedAt: string;              // ISO 8601
-  finishedAt: string;             // ISO 8601
+  invocationId: string; // uuid v7 (time-ordered for natural sort)
+  parentInvocationId?: string; // causality chain — retries and sub-calls point to parent
+  runId: string; // groups all invocations in one pipeline execution
+  agent: string; // agent name: "creative-director", "brand-auditor", etc.
+  productId?: string; // if scoped to a specific product
+  aspectRatio?: string; // if scoped to a specific variant
+  startedAt: string; // ISO 8601
+  finishedAt: string; // ISO 8601
   durationMs: number;
   status: 'ok' | 'retry' | 'error';
 
   // Artifact references — stored in _audit/<invocationId>/
-  inputRef: string;               // path to input artifact (JSON or image)
-  outputRef?: string;             // path to output artifact
-  inputSummary?: Record<string, unknown>;   // small inline summary for quick scanning
+  inputRef: string; // path to input artifact (JSON or image)
+  outputRef?: string; // path to output artifact
+  inputSummary?: Record<string, unknown>; // small inline summary for quick scanning
   outputSummary?: Record<string, unknown>;
 
   // AI provider metadata
-  model?: string;                 // e.g., "gemini-2.5-flash", "imagen-4.0-fast"
-  provider?: string;              // e.g., "gemini", "imagen", "firefly"
+  model?: string; // e.g., "gemini-2.5-flash", "imagen-4.0-fast"
+  provider?: string; // e.g., "gemini", "imagen", "firefly"
   tokens?: { prompt: number; completion: number };
   costUsdEst?: number;
 
@@ -46,5 +46,5 @@ export interface AgentInvocation {
 export interface InvocationScope {
   productId?: string;
   aspectRatio?: string;
-  parentId?: string;              // links to parent invocation for sub-calls
+  parentId?: string; // links to parent invocation for sub-calls
 }

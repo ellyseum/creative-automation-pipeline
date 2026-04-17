@@ -16,15 +16,23 @@ import { toJSONSchema, type ZodType } from 'zod';
 // Zod v4 has built-in toJSONSchema — the third-party zod-to-json-schema package
 // is incompatible with zod v4 (returns empty schemas). Use the native one.
 import type {
-  LLMClient, MultimodalLLMClient, EmbeddingClient,
-  LLMMessage, LLMResponse, ToolDeclaration, ToolCall,
+  LLMClient,
+  MultimodalLLMClient,
+  EmbeddingClient,
+  LLMMessage,
+  LLMResponse,
+  ToolDeclaration,
+  ToolCall,
 } from '../ports/llm-client.js';
 
 // Strip markdown code fences from LLM responses.
 // Gemini sometimes wraps JSON in ```json ... ``` even with structured output enabled.
 // This is a known behavior — clean it before parsing.
 function stripCodeFences(text: string): string {
-  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  return text
+    .replace(/^```(?:json)?\s*\n?/i, '')
+    .replace(/\n?```\s*$/i, '')
+    .trim();
 }
 
 // Convert our ToolDeclaration to Gemini's format.
@@ -33,7 +41,7 @@ function toGeminiFunctionDecl(tool: ToolDeclaration) {
   return {
     name: tool.name,
     description: tool.description,
-    parameters: tool.parameters,  // Gemini accepts JSON Schema directly via parametersJsonSchema
+    parameters: tool.parameters, // Gemini accepts JSON Schema directly via parametersJsonSchema
   };
 }
 
@@ -41,8 +49,8 @@ function toGeminiFunctionDecl(tool: ToolDeclaration) {
 // Gemini doesn't use a "system" role — system is a separate config field.
 function toGeminiContents(messages: LLMMessage[]) {
   return messages
-    .filter(m => m.role !== 'system')   // system handled separately
-    .map(m => {
+    .filter((m) => m.role !== 'system') // system handled separately
+    .map((m) => {
       const parts: Array<Record<string, unknown>> = [];
 
       if (typeof m.content === 'string') {
@@ -62,13 +70,15 @@ function toGeminiContents(messages: LLMMessage[]) {
       if (m.role === 'tool' && m.toolCallId) {
         return {
           role: 'user',
-          parts: [{
-            functionResponse: {
-              name: m.toolCallId.split(':')[0] || 'unknown',  // we encode name:id
-              response: { result: typeof m.content === 'string' ? JSON.parse(m.content) : m.content },
-              id: m.toolCallId,
+          parts: [
+            {
+              functionResponse: {
+                name: m.toolCallId.split(':')[0] || 'unknown', // we encode name:id
+                response: { result: typeof m.content === 'string' ? JSON.parse(m.content) : m.content },
+                id: m.toolCallId,
+              },
             },
-          }],
+          ],
         };
       }
 
@@ -101,9 +111,9 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
         const status = err?.status ?? err?.code;
         const isRetryable = status === 429 || status === 503;
         if (!isRetryable || attempt === maxRetries) throw err;
-        const delayMs = Math.pow(2, attempt + 1) * 1000;  // 2s, 4s, 8s
+        const delayMs = Math.pow(2, attempt + 1) * 1000; // 2s, 4s, 8s
         console.warn(`[gemini] ${status} — retrying in ${delayMs / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
-        await new Promise(r => setTimeout(r, delayMs));
+        await new Promise((r) => setTimeout(r, delayMs));
       }
     }
     throw new Error('Unreachable');
@@ -131,22 +141,26 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
 
     // Tool declarations for function-calling agents
     if (opts.tools?.length) {
-      config.tools = [{
-        functionDeclarations: opts.tools.map(toGeminiFunctionDecl),
-      }];
+      config.tools = [
+        {
+          functionDeclarations: opts.tools.map(toGeminiFunctionDecl),
+        },
+      ];
       if (opts.forceToolUse) {
         config.toolConfig = { functionCallingConfig: { mode: 'ANY' } };
       }
     }
 
-    const resp = await this.withRetry(() => this.ai.models.generateContent({
-      model: this.model,
-      contents: toGeminiContents(opts.messages),
-      config,
-    }));
+    const resp = await this.withRetry(() =>
+      this.ai.models.generateContent({
+        model: this.model,
+        contents: toGeminiContents(opts.messages),
+        config,
+      }),
+    );
 
     // Extract tool calls if present
-    const toolCalls: ToolCall[] | undefined = resp.functionCalls?.map(fc => ({
+    const toolCalls: ToolCall[] | undefined = resp.functionCalls?.map((fc) => ({
       id: fc.id ?? `${fc.name}:${Date.now()}`,
       name: fc.name ?? 'unknown',
       args: (fc.args ?? {}) as Record<string, unknown>,
@@ -159,7 +173,7 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
     };
 
     return {
-      text: toolCalls?.length ? undefined : (resp.text ? stripCodeFences(resp.text) : undefined),
+      text: toolCalls?.length ? undefined : resp.text ? stripCodeFences(resp.text) : undefined,
       toolCalls: toolCalls?.length ? toolCalls : undefined,
       tokens,
       model: this.model,
@@ -186,11 +200,13 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
       config.responseJsonSchema = toJSONSchema(opts.schema);
     }
 
-    const resp = await this.withRetry(() => this.ai.models.generateContent({
-      model: this.model,
-      contents,
-      config,
-    }));
+    const resp = await this.withRetry(() =>
+      this.ai.models.generateContent({
+        model: this.model,
+        contents,
+        config,
+      }),
+    );
 
     return {
       text: resp.text ? stripCodeFences(resp.text) : '',
@@ -205,11 +221,13 @@ export class GeminiAdapter implements LLMClient, MultimodalLLMClient, EmbeddingC
   // --- EmbeddingClient ---
 
   async embed(input: string, opts?: { dimensions?: number }): Promise<number[]> {
-    const resp = await this.withRetry(() => this.ai.models.embedContent({
-      model: this.embeddingModel,
-      contents: input,
-      config: { outputDimensionality: opts?.dimensions ?? 768 },
-    }));
+    const resp = await this.withRetry(() =>
+      this.ai.models.embedContent({
+        model: this.embeddingModel,
+        contents: input,
+        config: { outputDimensionality: opts?.dimensions ?? 768 },
+      }),
+    );
 
     // embedContent returns { embeddings: [{ values: number[] }] }
     const values = resp.embeddings?.[0]?.values;

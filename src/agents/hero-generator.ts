@@ -18,7 +18,7 @@ import type { GeneratedImage } from '../ports/image-generator.js';
 export interface HeroGeneratorInput {
   prompt: string;
   negativePrompt?: string;
-  aspectRatio?: string;   // default: "1:1" (square hero, cropped per-ratio later by Composer)
+  aspectRatio?: string; // default: "1:1" (square hero, cropped per-ratio later by Composer)
 }
 
 // Output: the generated image + metadata for the manifest

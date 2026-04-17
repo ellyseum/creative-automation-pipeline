@@ -14,7 +14,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { AzureBlobStorage } from '../src/adapters/azure-blob-storage.js';
 
-const AZURITE_CONN = 'DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;';
+const AZURITE_CONN =
+  'DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;';
 const TEST_CONTAINER = `test-${Date.now()}`;
 
 let storage: AzureBlobStorage;
@@ -42,7 +43,9 @@ afterAll(async () => {
     for (const key of keys) {
       await storage.delete!(key);
     }
-  } catch { /* container may not exist */ }
+  } catch {
+    /* container may not exist */
+  }
 });
 
 describe('AzureBlobStorage (Azurite)', () => {
@@ -59,7 +62,7 @@ describe('AzureBlobStorage (Azurite)', () => {
     await storage.put('images/test.png', png, 'image/png');
     const result = await storage.get('images/test.png');
     expect(result[0]).toBe(0x89);
-    expect(result[1]).toBe(0x50);  // 'P'
+    expect(result[1]).toBe(0x50); // 'P'
     expect(result.length).toBe(8);
   });
 
@@ -79,8 +82,8 @@ describe('AzureBlobStorage (Azurite)', () => {
 
     const listed = await storage.list('list-test/');
     expect(listed).toHaveLength(2);
-    expect(listed.some(p => p.includes('a.txt'))).toBe(true);
-    expect(listed.some(p => p.includes('b.txt'))).toBe(true);
+    expect(listed.some((p) => p.includes('a.txt'))).toBe(true);
+    expect(listed.some((p) => p.includes('b.txt'))).toBe(true);
   });
 
   it.skipIf(!azuriteAvailable)('delete removes a blob', async () => {
@@ -94,6 +97,6 @@ describe('AzureBlobStorage (Azurite)', () => {
     const result = await storage.put('url-test.txt', Buffer.from('url'), 'text/plain');
     expect(result.key).toBe('url-test.txt');
     expect(result.url).toContain('url-test.txt');
-    expect(result.url).toContain('10000');  // Azurite port
+    expect(result.url).toContain('10000'); // Azurite port
   });
 });

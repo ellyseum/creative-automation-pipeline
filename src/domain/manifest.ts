@@ -10,17 +10,17 @@ import type { ProductVariants } from './creative.js';
 
 export interface RunManifest {
   runId: string;
-  briefFile: string;                    // path to the source brief
-  startedAt: string;                    // ISO 8601
+  briefFile: string; // path to the source brief
+  startedAt: string; // ISO 8601
   finishedAt: string;
   durationMs: number;
 
   // Provider info — what was used for this run
   providers: {
-    llm: string;                        // e.g., "gemini-2.5-flash"
-    imageGenerator: string;             // e.g., "imagen-4.0-fast"
-    storage: string;                    // e.g., "local-fs" or "azure-blob"
-    embedding: string;                  // e.g., "gemini-embedding-001"
+    llm: string; // e.g., "gemini-2.5-flash"
+    imageGenerator: string; // e.g., "imagen-4.0-fast"
+    storage: string; // e.g., "local-fs" or "azure-blob"
+    embedding: string; // e.g., "gemini-embedding-001"
   };
 
   // Brand assets used (with integrity hashes for traceability)
@@ -36,8 +36,8 @@ export interface RunManifest {
   // Aggregate cost tracking
   costSummary: {
     totalUsdEst: number;
-    byAgent: Record<string, number>;    // agent name → total cost
-    byProduct: Record<string, number>;  // product id → total cost
+    byAgent: Record<string, number>; // agent name → total cost
+    byProduct: Record<string, number>; // product id → total cost
     byProvider: Record<string, number>; // provider name → total cost
   };
 
@@ -45,7 +45,7 @@ export interface RunManifest {
   stats: {
     totalProducts: number;
     totalCreatives: number;
-    totalGenerations: number;           // how many hero images were generated (vs reused)
+    totalGenerations: number; // how many hero images were generated (vs reused)
     totalRetries: number;
     brandChecksPassed: number;
     brandChecksFailed: number;

@@ -18,10 +18,10 @@ import type { Agent } from './base.js';
 import type { RunContext } from '../infra/run-context.js';
 
 export interface LocalizerInput {
-  message: string;        // source message (typically English)
-  region: string;         // target region: "en-US", "ja-JP", "es-MX", etc.
-  audience: string;       // target audience context
-  brandTone?: string;     // brand tone for style matching
+  message: string; // source message (typically English)
+  region: string; // target region: "en-US", "ja-JP", "es-MX", etc.
+  audience: string; // target audience context
+  brandTone?: string; // brand tone for style matching
 }
 
 const LocalizerOutputSchema = z.object({
@@ -65,7 +65,9 @@ export class LocalizerAgent implements Agent<LocalizerInput, LocalizerOutput> {
       `Target region: ${input.region}`,
       `Target audience: ${input.audience}`,
       input.brandTone ? `Brand tone: ${input.brandTone}` : '',
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const resp = await ctx.adapters.llm.complete({
       system,

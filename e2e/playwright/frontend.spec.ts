@@ -46,10 +46,9 @@ test.describe('Creative Pipeline Frontend', () => {
     await expect(page.locator('#status')).toBeVisible();
 
     // Wait for completion (stub mode ~2-3s)
-    await page.waitForFunction(
-      () => document.getElementById('status')?.classList.contains('completed'),
-      { timeout: 30000 },
-    );
+    await page.waitForFunction(() => document.getElementById('status')?.classList.contains('completed'), {
+      timeout: 30000,
+    });
 
     // Results should be visible
     await expect(page.locator('#results')).toBeVisible();
@@ -84,10 +83,9 @@ test.describe('Creative Pipeline Frontend', () => {
       return sel && sel.options.length > 0 && sel.options[0].value !== '';
     });
     await page.click('#run-btn');
-    await page.waitForFunction(
-      () => document.getElementById('status')?.classList.contains('completed'),
-      { timeout: 30000 },
-    );
+    await page.waitForFunction(() => document.getElementById('status')?.classList.contains('completed'), {
+      timeout: 30000,
+    });
 
     // Past runs list should have at least one entry
     const runItems = page.locator('#runs-list li');

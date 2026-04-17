@@ -35,10 +35,7 @@ describe('BriefSchema', () => {
       ...validBrief,
       brand: { ...validBrief.brand, tone: 'energetic', fonts: { display: 'font.ttf' } },
       campaign: { ...validBrief.campaign, mood_reference: 'mood.jpg' },
-      products: [
-        { ...validBrief.products[0], hero_asset: 'hero.jpg' },
-        validBrief.products[1],
-      ],
+      products: [{ ...validBrief.products[0], hero_asset: 'hero.jpg' }, validBrief.products[1]],
       aspect_ratios: ['1:1', '9:16'],
     };
     const result = BriefSchema.parse(withOptionals);
@@ -62,10 +59,7 @@ describe('BriefSchema', () => {
   it('rejects product IDs with special characters', () => {
     const badId = {
       ...validBrief,
-      products: [
-        { id: 'has spaces', name: 'Bad', description: 'nope' },
-        validBrief.products[1],
-      ],
+      products: [{ id: 'has spaces', name: 'Bad', description: 'nope' }, validBrief.products[1]],
     };
     expect(() => BriefSchema.parse(badId)).toThrow();
   });

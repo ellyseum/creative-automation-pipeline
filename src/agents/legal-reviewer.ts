@@ -18,29 +18,40 @@ import type { RunContext } from '../infra/run-context.js';
 import type { LegalCheckResult } from '../domain/creative.js';
 
 export interface LegalReviewerInput {
-  image: Buffer;           // the final rendered creative
+  image: Buffer; // the final rendered creative
   mimeType: string;
-  message: string;         // the rendered text (for regex checks)
-  region: string;          // region for regulatory context
+  message: string; // the rendered text (for regex checks)
+  region: string; // region for regulatory context
   productCategory?: string;
 }
 
 // Default prohibited words for en-US advertising.
 // In production, this would be configurable per region + product category.
 const PROHIBITED_WORDS = [
-  'cure', 'cures', 'miracle', 'guaranteed', 'guarantee',
-  'risk-free', 'no risk', 'clinically proven',
-  'FDA approved', 'doctor recommended',
-  '#1', 'number one', 'best in class',
+  'cure',
+  'cures',
+  'miracle',
+  'guaranteed',
+  'guarantee',
+  'risk-free',
+  'no risk',
+  'clinically proven',
+  'FDA approved',
+  'doctor recommended',
+  '#1',
+  'number one',
+  'best in class',
 ];
 
 // Zod schema for the semantic LLM check
 const SemanticLegalCheckSchema = z.object({
-  flags: z.array(z.object({
-    type: z.enum(['health_claim', 'implied_guarantee', 'comparative', 'prohibited_word']),
-    text: z.string().describe('The specific text or visual element flagged'),
-    severity: z.enum(['low', 'medium', 'high']),
-  })),
+  flags: z.array(
+    z.object({
+      type: z.enum(['health_claim', 'implied_guarantee', 'comparative', 'prohibited_word']),
+      text: z.string().describe('The specific text or visual element flagged'),
+      severity: z.enum(['low', 'medium', 'high']),
+    }),
+  ),
   verdict: z.enum(['clear', 'review_needed', 'blocked']),
 });
 
@@ -63,7 +74,7 @@ export class LegalReviewerAgent implements Agent<LegalReviewerInput, LegalCheckR
     }
 
     // If hard-blocked words found, skip the LLM call — verdict is clear
-    if (flags.some(f => f.severity === 'high')) {
+    if (flags.some((f) => f.severity === 'high')) {
       return { verdict: 'blocked', flags };
     }
 
@@ -80,7 +91,9 @@ export class LegalReviewerAgent implements Agent<LegalReviewerInput, LegalCheckR
       '',
       `Analyze both the TEXT and IMAGERY in this ad creative.`,
       `Flag any regulatory concerns. Be conservative — flag "review_needed" for ambiguous cases.`,
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     const result = await ctx.adapters.multimodal.analyzeImage({
       image: input.image,
@@ -95,9 +108,11 @@ export class LegalReviewerAgent implements Agent<LegalReviewerInput, LegalCheckR
     const allFlags = [...flags, ...semantic.flags];
 
     // Determine final verdict — regex "blocked" overrides LLM
-    const verdict = allFlags.some(f => f.severity === 'high') ? 'blocked'
-      : allFlags.length > 0 ? 'review_needed'
-      : 'clear';
+    const verdict = allFlags.some((f) => f.severity === 'high')
+      ? 'blocked'
+      : allFlags.length > 0
+        ? 'review_needed'
+        : 'clear';
 
     return { verdict, flags: allFlags };
   }

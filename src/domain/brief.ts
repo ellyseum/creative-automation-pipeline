@@ -15,14 +15,16 @@ import { z } from 'zod';
 export const BrandSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  logo: z.string().min(1),                              // path to logo in storage
-  palette: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).min(1),  // hex colors
-  fonts: z.object({
-    display: z.string().min(1),                          // path to display font (TTF/OTF)
-    body: z.string().optional(),                         // path to body font (optional)
-  }).optional(),
-  tone: z.string().optional(),                           // e.g., "energetic, minimal, health-forward"
-  guidelines: z.string().optional(),                     // path to brand guidelines doc (for LLM context)
+  logo: z.string().min(1), // path to logo in storage
+  palette: z.array(z.string().regex(/^#[0-9A-Fa-f]{6}$/)).min(1), // hex colors
+  fonts: z
+    .object({
+      display: z.string().min(1), // path to display font (TTF/OTF)
+      body: z.string().optional(), // path to body font (optional)
+    })
+    .optional(),
+  tone: z.string().optional(), // e.g., "energetic, minimal, health-forward"
+  guidelines: z.string().optional(), // path to brand guidelines doc (for LLM context)
 });
 
 // --- Campaign definition ---
@@ -30,8 +32,8 @@ export const BrandSchema = z.object({
 
 export const CampaignSchema = z.object({
   name: z.string().min(1),
-  message: z.string().min(1).max(200),                   // the headline — rendered on every creative
-  mood_reference: z.string().optional(),                 // optional mood/reference image path
+  message: z.string().min(1).max(200), // the headline — rendered on every creative
+  mood_reference: z.string().optional(), // optional mood/reference image path
 });
 
 // --- Product definition ---
@@ -42,8 +44,8 @@ export const ProductSchema = z.object({
   id: z.string().regex(/^[a-zA-Z0-9_-]+$/, 'Product ID must be alphanumeric/dash/underscore'),
   name: z.string().min(1),
   description: z.string().min(1),
-  hero_asset: z.string().optional(),                     // path to existing hero image — reused when available
-  assets: z.array(z.string()).optional(),                // additional asset paths (lifestyle shots, detail views, etc.)
+  hero_asset: z.string().optional(), // path to existing hero image — reused when available
+  assets: z.array(z.string()).optional(), // additional asset paths (lifestyle shots, detail views, etc.)
 });
 
 // --- Full brief ---
@@ -52,10 +54,10 @@ export const ProductSchema = z.object({
 export const BriefSchema = z.object({
   brand: BrandSchema,
   campaign: CampaignSchema,
-  region: z.string().min(2).max(10),                     // e.g., "en-US", "ja-JP"
-  audience: z.string().min(1),                           // e.g., "millennials, urban, health-conscious"
+  region: z.string().min(2).max(10), // e.g., "en-US", "ja-JP"
+  audience: z.string().min(1), // e.g., "millennials, urban, health-conscious"
   products: z.array(ProductSchema).min(2, 'Brief must include at least 2 products'),
-  aspect_ratios: z.array(z.string()).optional(),         // override default ["1:1", "9:16", "16:9"]
+  aspect_ratios: z.array(z.string()).optional(), // override default ["1:1", "9:16", "16:9"]
 });
 
 // --- Inferred TypeScript types ---
