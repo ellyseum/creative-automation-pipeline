@@ -14,10 +14,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // Default: run unit tests + CLI E2E (no server dependency)
-    include: ['src/**/*.test.ts', 'e2e/pipeline.test.ts'],
+    // Include all vitest test files (unit, integration, e2e)
+    include: ['src/**/*.test.ts', 'e2e/**/*.test.ts'],
 
-    // Exclude Playwright tests (they use their own runner)
+    // Exclude Playwright tests (they use @playwright/test runner, not vitest)
     exclude: ['e2e/playwright/**', 'node_modules/**'],
 
     // Timeouts — CLI E2E needs more time for stub pipeline

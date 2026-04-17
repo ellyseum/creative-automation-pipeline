@@ -10,7 +10,8 @@ import { execSync, spawn, type ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
 
 const PROJECT_ROOT = join(import.meta.dirname, '..');
-const PORT = 3099; // use a non-standard port to avoid conflicts
+// Random port in high range to avoid conflicts with other tests
+const PORT = 30000 + Math.floor(Math.random() * 10000);
 const BASE = `http://localhost:${PORT}`;
 
 let server: ChildProcess;

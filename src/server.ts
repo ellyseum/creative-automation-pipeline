@@ -191,6 +191,13 @@ async function runPipeline(job: Job): Promise<void> {
   }
 }
 
+// Prevent unhandled rejections from crashing the server.
+// Pipeline runs execute in the background — if they throw,
+// the job status is set to 'failed' but the server stays up.
+process.on('unhandledRejection', (reason) => {
+  console.error('[server] Unhandled rejection:', reason);
+});
+
 // --- Start ---
 
 app.listen(PORT, () => {
