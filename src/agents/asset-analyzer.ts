@@ -63,6 +63,11 @@ export class AssetAnalyzerAgent implements Agent<AssetAnalyzerInput, AssetMetada
     });
 
     // Parse the structured response — zod validates and types it
-    return AssetMetadataSchema.parse(JSON.parse(result.text));
+    const parsed = JSON.parse(result.text);
+    // DEBUG: log what was parsed to diagnose stub issues
+    if (process.env.LOG_LEVEL === 'debug') {
+      console.error('[asset-analyzer] parsed keys:', Object.keys(parsed));
+    }
+    return AssetMetadataSchema.parse(parsed);
   }
 }

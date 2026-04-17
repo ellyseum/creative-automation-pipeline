@@ -23,26 +23,36 @@ import { LocalFsStorage } from './local-fs-storage.js';
 import { AzureBlobStorage } from './azure-blob-storage.js';
 import { JsonAssetIndex } from './json-asset-index.js';
 import { StubGeneratorAdapter } from './stub-generator.js';
+import { StubLLMAdapter } from './stub-llm.js';
 import { FireflyGeneratorAdapter } from './firefly-generator.js';
 
 export function resolveAdapters(): Adapters {
-  // --- LLM + Multimodal + Embedding ---
-  // Gemini covers all three via one adapter. If no key, we'd need stubs
-  // (not implemented for LLM — fail fast rather than produce garbage).
+  // --- Full stub mode ---
+  // IMAGE_PROVIDER=stub with no GEMINI_API_KEY = everything stubbed.
+  // Useful for: testing pipeline structure, CI, demo without API keys.
+  const imageProviderName = optional('IMAGE_PROVIDER', 'imagen');
   const geminiKey = optional('GEMINI_API_KEY');
 
-  if (!geminiKey) {
-    throw new Error(
-      'GEMINI_API_KEY is required. Set it in .env or environment.\n' +
-      'Get a key from https://aistudio.google.com/app/apikey'
-    );
+  if (!geminiKey || imageProviderName === 'stub') {
+    if (!geminiKey && imageProviderName !== 'stub') {
+      console.warn('⚠ No GEMINI_API_KEY — running in full stub mode (no real AI calls)');
+    }
+
+    const stub = new StubLLMAdapter();
+    return {
+      llm: stub,
+      multimodal: stub,
+      embedding: stub,
+      imageGen: new StubGeneratorAdapter(),
+      storage: new LocalFsStorage(),
+      assetIndex: new JsonAssetIndex(),
+    };
   }
 
   const gemini = new GeminiAdapter({ apiKey: geminiKey });
 
   // --- Image Generator ---
-  // Selection order: explicit env var > Firefly if creds available > Imagen default > stub
-  const imageProviderName = optional('IMAGE_PROVIDER', 'imagen');
+  // Selection order: explicit env var > Firefly if creds available > Imagen default
   let imageGen;
 
   switch (imageProviderName) {
