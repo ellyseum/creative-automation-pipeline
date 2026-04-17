@@ -11,7 +11,7 @@ services:
     image: mcr.microsoft.com/azure-storage/azurite
     # --blobHost 0.0.0.0: bind to all interfaces (required in Docker)
     # --loose: relax API version checks for newer SDK versions
-    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --loose --skipApiVersionCheck
     ports:
       - "10000:10000"   # Blob service
       - "10001:10001"   # Queue service

@@ -1,6 +1,15 @@
 # Summer Launch 2026 — Morning Co.
 # Example campaign brief for the creative automation pipeline.
 # Two products, en-US market, millennials target audience.
+#
+# Assets:
+#   hero_asset  — explicit hero image to use (skips AI generation)
+#   assets      — additional reference images (indexed for RAG retrieval)
+#
+# If hero_asset is missing or the file doesn't exist in storage,
+# the Creative Director uses RAG to search the library and decides
+# whether to reuse an existing asset, use one as a style reference,
+# or generate a new hero from scratch.
 
 brand:
   id: morning-co
@@ -23,9 +32,19 @@ products:
   - id: solar-flask
     name: Solar Flask 1L
     description: Premium copper-lined insulated water bottle with minimalist design
-    hero_asset: assets/products/solar-flask/hero.jpg  # existing — will be reused
+    hero_asset: assets/products/solar-flask/hero.jpg
+    assets:
+      - assets/products/solar-flask/lifestyle-01.jpg
+      - assets/products/solar-flask/lifestyle-02.jpg
+      - assets/products/solar-flask/detail.jpg
+      - assets/products/solar-flask/action.jpg
 
   - id: dawn-brew
     name: Dawn Brew Tea
     description: Organic morning tea blend with adaptogens for sustained energy
-    # No hero_asset — pipeline will search library or generate via GenAI
+    # No hero_asset — pipeline will search library via RAG or generate via GenAI
+    assets:
+      - assets/products/dawn-brew/tea-cup.jpg
+      - assets/products/dawn-brew/packaging.jpg
+      - assets/products/dawn-brew/lifestyle-01.jpg
+      - assets/products/dawn-brew/ceremony.jpg

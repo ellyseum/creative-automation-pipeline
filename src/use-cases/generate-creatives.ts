@@ -255,6 +255,29 @@ async function resolveHero(
 ): Promise<HeroResult> {
   const { storage } = ctx.adapters;
 
+  // FIRST: check if the brief explicitly specifies a hero asset for this product.
+  // This is a deterministic override — if the client says "use THIS image", respect it.
+  // The Director's RAG-based strategy is only consulted when no explicit asset is given.
+  if (product.hero_asset) {
+    try {
+      const exists = await storage.exists(product.hero_asset);
+      if (exists) {
+        ctx.logger.info(product.id, `Using explicit hero_asset from brief: ${product.hero_asset}`);
+        const bytes = await storage.get(product.hero_asset);
+        return {
+          source: 'input',
+          path: product.hero_asset,
+          bytes,
+        };
+      }
+      // Asset declared but doesn't exist in storage — warn and fall through to Director strategy
+      ctx.logger.warn(product.id, `hero_asset "${product.hero_asset}" not found in storage — falling back to Director strategy`);
+    } catch (err) {
+      ctx.logger.warn(product.id, `Failed to load hero_asset "${product.hero_asset}": ${(err as Error).message}`);
+    }
+  }
+
+  // SECOND: use the Director's RAG-based strategy
   // Strategy: REUSE — use the matched asset directly
   if (plan.strategy === 'reuse' && plan.assetPath) {
     ctx.logger.info(product.id, `Reusing asset: ${plan.assetPath} (sim: ${plan.assetSimilarity?.toFixed(2)})`);

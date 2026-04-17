@@ -43,6 +43,7 @@ export const ProductSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
   hero_asset: z.string().optional(),                     // path to existing hero image — reused when available
+  assets: z.array(z.string()).optional(),                // additional asset paths (lifestyle shots, detail views, etc.)
 });
 
 // --- Full brief ---
