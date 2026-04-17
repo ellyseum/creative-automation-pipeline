@@ -112,15 +112,38 @@ output/run-2026-04-16T23-16-47/
 ## CLI Reference
 
 ```bash
-# Run the full pipeline
+# Run the full pipeline (via bin script — auto-sources .env)
+bin/pipeline run briefs/example.yaml
+
+# Or directly via npx
 npx tsx src/cli.ts run <brief.yaml>
 
 # Inspect past run audit trail
-npx tsx src/cli.ts audit output/run-<id>
+bin/pipeline audit output/run-<id>
 
 # Cost breakdown
-npx tsx src/cli.ts cost output/run-<id>
+bin/pipeline cost output/run-<id>
 ```
+
+## Web Server
+
+```bash
+# Start the web server (auto-sources .env)
+bin/server
+# Or: npm run dev
+
+# Open http://localhost:3000
+# Select a brief, click "Run Pipeline", watch results appear
+```
+
+API endpoints:
+- `POST /api/run` — start a pipeline run (returns job ID)
+- `GET /api/jobs/:id` — poll job status
+- `GET /api/runs` — list past runs
+- `GET /api/runs/:id` — get run manifest
+- `GET /api/runs/:id/creatives` — list creative files
+- `GET /api/runs/:id/audit` — get audit log entries
+- `GET /api/runs/:id/report` — get markdown report
 
 ## Environment Variables
 
@@ -156,10 +179,22 @@ AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devsto
 ## Testing
 
 ```bash
-npm test                    # all tests
+npm test                    # unit + CLI E2E (29 tests)
+npm run test:api            # API E2E — Express server lifecycle (6 tests)
+npm run test:playwright     # Frontend E2E — Playwright browser tests (4 tests)
+npm run test:all            # everything sequentially (39+ tests)
 npm run test:unit           # unit only (no API calls)
 npm run test:watch          # watch mode
 ```
+
+Test tiers:
+| Tier | Count | What | Dependencies |
+|------|-------|------|-------------|
+| Unit | 28 | Brief schema, cost tracker, asset index, FS storage, audit writer | None |
+| CLI E2E | 1 | Full pipeline stub run, output structure verification | None |
+| API E2E | 6 | Express server job lifecycle, all endpoints | Starts/stops server |
+| Azurite | 7 | Azure Blob Storage CRUD | docker-compose up |
+| Playwright | 4 | Frontend UI: brief select, run, results grid, past runs | Starts/stops server + browser |
 
 ## Key Design Decisions
 
