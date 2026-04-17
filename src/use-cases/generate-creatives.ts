@@ -142,7 +142,9 @@ export async function generateCreatives(briefPath: string, ctx: RunContext): Pro
   };
 
   // Write manifest
-  const outputDir = join('output', ctx.runId);
+  // Use ctx.outputDir — set by the CLI from the -o flag.
+  // Don't hardcode 'output/' — tests may use a temp directory.
+  const outputDir = ctx.outputDir;
   await mkdir(outputDir, { recursive: true });
   await writeFile(join(outputDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
@@ -322,9 +324,10 @@ async function resolveHero(
     if (auditResult.verdict !== 'fail') {
       ctx.logger.success(product.id, `Hero ${auditResult.verdict} (attempt ${attempt + 1})`);
 
-      // Save intermediate hero
-      const heroPath = `output/${ctx.runId}/_intermediate/${product.id}-hero.png`;
-      await storage.put(heroPath, heroBytes, 'image/png');
+      // Save intermediate hero — direct fs write (outputDir is absolute)
+      const heroPath = join(ctx.outputDir, 'creatives', '_intermediate', `${product.id}-hero.png`);
+      await mkdir(join(ctx.outputDir, 'creatives', '_intermediate'), { recursive: true });
+      await writeFile(heroPath, heroBytes);
 
       return {
         source: 'generated',
@@ -347,8 +350,9 @@ async function resolveHero(
 
   // Exhausted retries — use the last generated hero anyway, flagged in manifest
   ctx.logger.warn(product.id, 'Hero audit failed after max retries — using last generation');
-  const heroPath = `output/${ctx.runId}/_intermediate/${product.id}-hero.png`;
-  await storage.put(heroPath, heroBytes!, 'image/png');
+  const heroPath = join(ctx.outputDir, 'creatives', '_intermediate', `${product.id}-hero.png`);
+  await mkdir(join(ctx.outputDir, 'creatives', '_intermediate'), { recursive: true });
+  await writeFile(heroPath, heroBytes!);
 
   return {
     source: 'generated',
@@ -412,9 +416,9 @@ async function composeAllRatios(
         retryHint,
       }, { productId: product.id, aspectRatio: ratio });
 
-      // Read the composed creative back from storage for auditing
-      const composedPath = `output/${ctx.runId}/${creative.outputPath}`;
-      const composedBytes = await ctx.adapters.storage.get(composedPath);
+      // Read the composed creative back for auditing — direct fs read since path is absolute
+      const composedPath = join(ctx.outputDir, creative.outputPath);
+      const composedBytes = await readFile(composedPath);
 
       // Brand Auditor — final creative check
       brandResult = await ctx.invoke(brandAuditor, {

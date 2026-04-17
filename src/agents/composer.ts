@@ -18,6 +18,8 @@
  */
 
 import sharp from 'sharp';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import type { Agent } from './base.js';
 import type { RunContext } from '../infra/run-context.js';
 import type { Creative } from '../domain/creative.js';
@@ -176,13 +178,14 @@ export class ComposerAgent implements Agent<ComposerInput, Creative> {
       .png()
       .toBuffer();
 
-    // Write the final creative to storage
-    const outputPath = `${input.productId}/${input.aspectRatio.replace(':', 'x')}.png`;
-    await ctx.adapters.storage.put(
-      `output/${ctx.runId}/${outputPath}`,
-      final,
-      'image/png',
-    );
+    // Write the final creative to the creatives/ subfolder — separate from audit artifacts.
+    // Output structure: <outputDir>/creatives/<product>/<ratio>.png
+    // Uses direct fs write (not storage adapter) because ctx.outputDir is absolute
+    // and may differ from the storage adapter's base directory.
+    const outputPath = `creatives/${input.productId}/${input.aspectRatio.replace(':', 'x')}.png`;
+    const fullPath = join(ctx.outputDir, outputPath);
+    await mkdir(dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, final);
 
     return {
       productId: input.productId,

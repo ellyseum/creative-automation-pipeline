@@ -1,0 +1,28 @@
+# Summer Launch 2026 — Morning Co. (Japanese market)
+# Tests localization: campaign message should be culturally adapted to ja-JP.
+
+brand:
+  id: morning-co
+  name: Morning Co.
+  logo: assets/brands/morning-co/logo.png
+  palette:
+    - "#FF5733"
+    - "#1A1A1A"
+    - "#F5F5F0"
+  tone: "energetic, minimal, health-forward"
+
+campaign:
+  name: "Summer Launch 2026"
+  message: "Level Up Your Morning"
+
+region: ja-JP
+audience: "millennials, urban, health-conscious, Tokyo/Osaka"
+
+products:
+  - id: solar-flask
+    name: Solar Flask 1L
+    description: Premium copper-lined insulated water bottle with minimalist design
+
+  - id: dawn-brew
+    name: Dawn Brew Tea
+    description: Organic morning tea blend with adaptogens for sustained energy
