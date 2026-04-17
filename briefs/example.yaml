@@ -1,0 +1,31 @@
+# Summer Launch 2026 — Morning Co.
+# Example campaign brief for the creative automation pipeline.
+# Two products, en-US market, millennials target audience.
+
+brand:
+  id: morning-co
+  name: Morning Co.
+  logo: assets/brands/morning-co/logo.png
+  palette:
+    - "#FF5733"   # Vibrant coral — primary accent
+    - "#1A1A1A"   # Near-black — text, bars
+    - "#F5F5F0"   # Warm off-white — backgrounds
+  tone: "energetic, minimal, health-forward"
+
+campaign:
+  name: "Summer Launch 2026"
+  message: "Level Up Your Morning"
+
+region: en-US
+audience: "millennials, urban, health-conscious"
+
+products:
+  - id: solar-flask
+    name: Solar Flask 1L
+    description: Premium copper-lined insulated water bottle with minimalist design
+    hero_asset: assets/products/solar-flask/hero.jpg  # existing — will be reused
+
+  - id: dawn-brew
+    name: Dawn Brew Tea
+    description: Organic morning tea blend with adaptogens for sustained energy
+    # No hero_asset — pipeline will search library or generate via GenAI
